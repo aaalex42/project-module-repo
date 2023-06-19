@@ -8,6 +8,14 @@
 
 ## Class Inventory
 
+### **Function *avg_level***
+
+### **Function *level***
+
+### **Function *put***
+
+### **Function *get***
+
 ---
 
 ## Process Wrappers
@@ -16,9 +24,9 @@
 
 ### **Function *produce***
 
-**Input:**
+**Input:** *pp ProdPlan*
 
-**Output:**
+**Output:** *None*
 
 It is a process wrapper around production plan, execution part and inventory update.
 It runs a production plan (i.e., one machine). Also, it has no bucket, as it continuously processes all jobs pending.
@@ -36,9 +44,9 @@ WHILE run forever (or until given simulation cycles):
 
 ### **Function *fulfill***
 
-**Input:**
+**Input:** *d Demand, inv Inventory, allow_part_shipments Bool, bucket (**CHECK VAR TYPE**)*
 
-**Output:**
+**Output:** *None*
 
 It is a demand fulfillment function for one set of demand and inventory per bucket.
 
@@ -54,9 +62,9 @@ WHILE run forever (or until given simulation cycles):
 
 ### **Function *plan***
 
-**Input:**
+**Input:** *pp ProdPlan*
 
-**Output:**
+**Output:** *None*
 
 Run one planning cycle per bucket (i.e., for 1 machine)
 
