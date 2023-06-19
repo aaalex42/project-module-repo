@@ -349,84 +349,84 @@ class Demand():
         return daily_prod_time + daily_setup_time
 
             
-def eoq_static(J, E_p, B_k, Z) -> int:
-    """ 
-    implements the Andler formula 
-    note the various imitations, in particular, constant demand pattern which 
-    is most often violated herein
-    J: annual demand
-    E_p: unit cost
-    B_k: setup cost per batch
-    Z: interest per year for storage, capital, ...
-    """
-    return round(numpy.sqrt(2.0 * J * B_k / E_p / Z))
+    def eoq_static(J, E_p, B_k, Z) -> int:
+        """ 
+        implements the Andler formula 
+        note the various imitations, in particular, constant demand pattern which 
+        is most often violated herein
+        J: annual demand
+        E_p: unit cost
+        B_k: setup cost per batch
+        Z: interest per year for storage, capital, ...
+        """
+        return round(numpy.sqrt(2.0 * J * B_k / E_p / Z))
 
-def eoq_dynamic(d, E_p, B_k, Z, mode) -> int:
-    """ 
-    calculcates the economic quanity, various models can be implemented 
-    d: demand list
-    mode: see below
-    rest like eoq_static
-    """
-    if mode == 'Andler':
-        # Andler, note this is not correct as the equation assumes constant demand
-        sum_d = sum(d)
-        len_d = len(d)
-        J = round(sum_d / len_d * DAYS_PER_YEAR)
-        return eoq_static(J, E_p, B_k, Z)
-    elif mode == 'FOP':
-        # fixed order period
-        return sum(d[0:min(FOP_PERIODS, len(d)) - 1])
-    else:
-        raise ValueError('{mode} not defined')
+    def eoq_dynamic(d, E_p, B_k, Z, mode) -> int:
+        """ 
+        calculcates the economic quanity, various models can be implemented 
+        d: demand list
+        mode: see below
+        rest like eoq_static
+        """
+        if mode == 'Andler':
+            # Andler, note this is not correct as the equation assumes constant demand
+            sum_d = sum(d)
+            len_d = len(d)
+            J = round(sum_d / len_d * DAYS_PER_YEAR)
+            return eoq_static(J, E_p, B_k, Z)
+        elif mode == 'FOP':
+            # fixed order period
+            return sum(d[0:min(FOP_PERIODS, len(d)) - 1])
+        else:
+            raise ValueError('{mode} not defined')
 
-DAYS_FC = 20
+    DAYS_FC = 20
 
-def print_func_demand(demand):
-    #print("p", demand.p)
-    print("rbase", demand.rbase)
-    print("n_good", demand.n_good)
-    print("n_bad", demand.n_bad)
-    print("backlog", demand.backlog)
-    print("demands", demand.demands)
-    print("forecasts", demand.forecasts)
-    print("nextd", demand.nextd)
-    print("curtd", demand.n_good)
-    print("fulfilled amount", demand.ff)
-    print("demanded amount", demand.d)
-    print("delta backlog", demand.delta_bl)
-    print("nextd", demand.nextd) #this does not make sense to output because it is the same as the first one (when printing)
-    #print("gen_demand_and_fc", demand.gen_demand_and_fc(DAYS_FC + 1)) unnecesary because it outputs None
-    print()
+    def print_func_demand(demand):
+        #print("p", demand.p)
+        print("rbase", demand.rbase)
+        print("n_good", demand.n_good)
+        print("n_bad", demand.n_bad)
+        print("backlog", demand.backlog)
+        print("demands", demand.demands)
+        print("forecasts", demand.forecasts)
+        print("nextd", demand.nextd)
+        print("curtd", demand.n_good)
+        print("fulfilled amount", demand.ff)
+        print("demanded amount", demand.d)
+        print("delta backlog", demand.delta_bl)
+        print("nextd", demand.nextd) #this does not make sense to output because it is the same as the first one (when printing)
+        #print("gen_demand_and_fc", demand.gen_demand_and_fc(DAYS_FC + 1)) unnecesary because it outputs None
+        print()
 
-    print("--------------------------------------------------------\n")
+        print("--------------------------------------------------------\n")
 
-product1 = Demand(p1, RBASE, DAYS_FC)
-print_func_demand(product1)
-print("AVG DAILY MACHINE TIME:", product1.avg_daily_machine_time())
-for i in range(len(product1.demands)):
-    print("DAY", i)
-    product1.fulfill(5000, ALLOW_PART_SHIPMENTS)
+    product1 = Demand(p1, RBASE, DAYS_FC)
     print_func_demand(product1)
-    print("SERVICE LEVEL:", product1.service_level())
-    
-"""
- self.p = p            # remembers product
-        self.rbase = rbase    # rounding base
-        self.n_good = 0       # counts the successful demand fulfillments
-        self.n_bad = 0        # counts the unsuccessful ones (not on time or amount)
-        self.backlog = 0      # stores the unfulfilled demands for later
-        self.demands = []     # holds the actual demands[d_fc], subject, is a ring buffer
-        self.forecasts = []   # holds the noised up forcasts [d_fc, first entry is tomorrow]
-        self.nextd = 0        # next event in days where demand is generated
-        self.curtd = 0        # pointer to current time relative to nextd
-        #self.t = []           # time stamp for fulfillment, just for analysis 
-        self.ff = []          # fulfilled amount
-        self.d = []           # demanded amount
-        self.delta_bl = []    # delta backlog
-        #self.env = env        # dto, just for analysis puposes
+    print("AVG DAILY MACHINE TIME:", product1.avg_daily_machine_time())
+    for i in range(len(product1.demands)):
+        print("DAY", i)
+        product1.fulfill(5000, ALLOW_PART_SHIPMENTS)
+        print_func_demand(product1)
+        print("SERVICE LEVEL:", product1.service_level())
+        
+    """
+    self.p = p            # remembers product
+            self.rbase = rbase    # rounding base
+            self.n_good = 0       # counts the successful demand fulfillments
+            self.n_bad = 0        # counts the unsuccessful ones (not on time or amount)
+            self.backlog = 0      # stores the unfulfilled demands for later
+            self.demands = []     # holds the actual demands[d_fc], subject, is a ring buffer
+            self.forecasts = []   # holds the noised up forcasts [d_fc, first entry is tomorrow]
+            self.nextd = 0        # next event in days where demand is generated
+            self.curtd = 0        # pointer to current time relative to nextd
+            #self.t = []           # time stamp for fulfillment, just for analysis 
+            self.ff = []          # fulfilled amount
+            self.d = []           # demanded amount
+            self.delta_bl = []    # delta backlog
+            #self.env = env        # dto, just for analysis puposes
 
-        # initially build demand stream, 1st is current demand
-        self.nextd = poisson_int(p['d_t_mu'], 1) 
-        self.gen_demand_and_fc(d_fc + 1) 
-"""
+            # initially build demand stream, 1st is current demand
+            self.nextd = poisson_int(p['d_t_mu'], 1) 
+            self.gen_demand_and_fc(d_fc + 1) 
+    """
