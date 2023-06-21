@@ -93,6 +93,75 @@ calculates either by andler formular on fixed order period
     if mode is FOP:
         1. calculate the minimum between FOP periods and the length of the demand list and then subtract
         2. calculate the sum of the demand list but from the first element until the index calculated in step1
+## Class production plan
+
+**Production plan and execution for one machine.**
+
+**Implements :** planning step including reorder point,econimic quantity and order scheduling /actual scheduling/production step.
+
+**Plan:**
+
+Adds production jobs,"produce" routine eliminates them again.It Hazty with adding new orders (generating new demand) then takes demand /inventory pipeline and fills the job pipline.
+
+**Procesures**
+
+*1.Iterate over the demands/inventories queue.*
+
+ 1.1. Seperate demand and inventory and product in different varriattes.
+ 
+ 1.2. Generate demand and forcast for 1 day:
+   
+
+       If the current inventory level for a poduct is <= than the reorder point and replenishment due of a product is <= than 0.
+       If replenishment open of a product is greater than  o THEN  calculate the EOQ dynamic with the actual demand (only first element ) and the next forcasts.
+       for the calculation cost per piece (for eoq), cost per batch and inventory interest (and eoq mode)
+
+       If eoq > 0 
+          THEN 1. add a new element to the joblist containg anount =eoq, current date ,inventory (current ) and relevant product.
+               2.decrease the replenishment open by the eoq.
+*2. Schedule the created joblist*
+
+Schedule the joblist using diffrent methods:Value,SPT,LPT, Slip.
+
+    If scheduling regime= Value:
+       the joblist is produced not in the ascending order ,but the joblist is then sorted by value = multiplying amont by cost per piece for eoq.
+    If scheduling regime = SPT:
+       ordering according to Time.
+       the joblist is sorted by value= multiplying  the amount by production time per piece 
+    If scheduling regime = LPT
+       Ordering similer to SPT but in the opposite direction.
+    If scheduling regime = Slip
+       the joblist is sorted by value =substracting  the date by (amount multiplied by production time per piece)
+       sort the joblist by sortes and ascending value ,eliminate sortes.
+*3. Produce*
+
+ It performe the following points:
+ 
+A.Executes the first joblist from the list and eliminated the entry.It return the duration of the production job , amount of parts produced and inventory.
+
+    If length of the Joblist is 0
+     THEN return 0,0,0 for duration , amount and inventory.
+     
+B.Place the amount, inventory and product in seprate variates and production amount must be greater than 0 .
+
+C.Calculate the duration to produce the given amount by sampling from Lognorm distribuation with mean =amount*production time per piece and sigma=varcoef/ √(amount)
+
+D.Increase the production time (total) by the sampled duration.
+
+E.Calculate the setup time by sampling from Lognorm Disribuation with the mean setup time per batch and sigma varcoef (of a machine),But only in the Case if last     product is diffrent than the current one (no setup time nedded if the product is the same).
+
+F.Increase the duration of production by the setup time .
+
+G.Add the setup time to the total setup time .
+
+H.Update the last product variable.
+
+I. Delete the first element from the joblist.
+
+K.Return the calculated duration of production Job, the amount produced and inventory.
+
+
+
 
 ## Class Inventory
 
