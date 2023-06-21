@@ -98,7 +98,7 @@ calculates either by andler formular on fixed order period
         
 ## Class production plan
 
-**Production plane and execution for one machine.**
+**Production plan and execution for one machine.**
 
 **Implements :** planning step including reorder point,economic quantity and order scheduling /actual scheduling/production step.
 
