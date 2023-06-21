@@ -96,7 +96,7 @@ calculates either by andler formular on fixed order period
 
 ---
         
-## Class production plan
+## Class ProdPlan
 
 **Production plan and execution for one machine.**
 
