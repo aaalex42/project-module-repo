@@ -89,35 +89,36 @@ The demand is double stochastic: a Poisson time distance, and a (not quite) Logn
         
 The real machine OEE is anywhere between 69% and 82%
 """
-Q_PER_DAY = 12000 # product 1 is low amount, high volatility, high uncertainty
+Q_PER_DAY = 10575 # product 1 is low amount, high volatility, high uncertainty
 p1 = { \
     'd_mu'         : Q_PER_DAY, # number of pieces per day produced \
-    'd_varcoef'    : 10/12, # var coef for demand determination \
-    'd_t_mu'       : 16, # number of days on avg between 2 orders \
+    'd_varcoef'    : 0.357, # var coef for demand determination \
+    'd_t_mu'       : 5.143, # number of days on avg between 2 orders \
     'd_fc_noise'   : 1.0, # var coef of forecast noise 0...1 as percentage \
     'safety_stock' : 4.0 * Q_PER_DAY * DAYS_PER_WEEK, # safety stock: 4 weeks \
     'E_p'          : 0.03,  # cost per piece for economic order quantity calc \
     'B_k'          : 200,  # setup cost per batch for eoq calc \
     'irate'        : 0.1,  # inventory interest for eoq calc \
-    't_e'          : 5.0 / SEC_PER_DAY,  # production time per piece in fractions of a day \
+    't_e'          : 1.0 / SEC_PER_DAY,  # production time per piece in fractions of a day \
     't_r'          : 2.0 / HOURS_PER_DAY,  # setup time per batch in fractions of a day \
     'eoq_mode'     : 'Andler' # which eoq model to use, definitions see below \
 }
     
-Q_PER_DAY = 140000 # product 2 is high amount, low volatility, medium uncertainty
+Q_PER_DAY = 461630 # product 2 is high amount, low volatility, medium uncertainty
 p2 = { \
     'd_mu'         : Q_PER_DAY, \
-    'd_varcoef'    : 30/14,  \
-    'd_t_mu'       : 12, \
+    'd_varcoef'    : 0.774,  \
+    'd_t_mu'       : 3.853, \
     'd_fc_noise'   : 0.5, \
-    'safety_stock' : 4.0 * Q_PER_DAY * DAYS_PER_WEEK, \
+    'safety_stock' : 2.0 * Q_PER_DAY * DAYS_PER_WEEK, \
     'E_p'          : 0.04, \
     'B_k'          : 300,  \
     'irate'        : 0.1,  \
-    't_e'          : 2.5 / SEC_PER_DAY, \
-    't_r'          : 3.0 / HOURS_PER_DAY, \
+    't_e'          : 0.5 / SEC_PER_DAY, \
+    't_r'          : 2.0 / HOURS_PER_DAY, \
     'eoq_mode'     : 'FOP' \
 }
+
  
 master_product_data = [p1, p2]
 
