@@ -10,7 +10,9 @@ class Production_DDPG_Env(gym.Env):
     It is based on discrete action and observation spaces.
     """
     def __init__(self):
-        self.action_space = None
+        self.action_space = spaces.Tuple(
+            (spaces.Discrete(2), spaces.Discrete(300000))
+        )
         self.observation_space = None
 
         #initialize the demands, inventories, warehouse and machine
@@ -25,7 +27,6 @@ class Production_DDPG_Env(gym.Env):
     def step(self, action):
         assert self.action_space.contains(action)
 
-        
 
 
     def _get_obs(self):

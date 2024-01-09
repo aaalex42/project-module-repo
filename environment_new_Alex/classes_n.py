@@ -269,7 +269,7 @@ class Warehouse:
         This function checks if it is possible to store a given amount for a product in the warehouse.
         """
 
-        if self.current_warehouse_level + order["amount"] <= MAXIMUM_INVENTORY:
+        if self.current_warehouse_level + order[1] <= MAXIMUM_INVENTORY:
             return True
         else:
             return False
@@ -306,11 +306,11 @@ class Machine:
         # ADD HERE MORE
 
     
-    @property
+    """@property
     def product_number(self):
-        """
-        This function returns which product (id: 0 or 1) is currently produced/processed.
-        """
+        
+        #This function returns which product (id: 0 or 1) is currently produced/processed.
+        
 
         if self.current_order == None:
             raise ValueError("Give first an order to the machine")      
@@ -318,6 +318,7 @@ class Machine:
             return 0
         elif self.current_order["product"] == "p2":
             return 1
+        """
     
 
     def is_possible_to_produce(self, order):
@@ -327,21 +328,24 @@ class Machine:
         Check the setup time too, if the product produced on the previous day is different.
         
         The structure of variable order:
+            OLD:
             order = {
                 "product": "p1" or "p2",
                 "amount": amount as integer
             }
+            NEW: 
+            order = [0 or 1 for product number, amount as integer]
         
         """ 
 
         #store the current order
         self.current_order = order
         # set the current product
-        self.current_product = self.products[self.product_number]
+        self.current_product = self.products[self.current_order[0]]
         
         order_duration = lognorm_int(
-                            mu = order["amount"] * self.current_product.product["t_e"],
-                            varcoef = MACHINE_VARCOEF / np.sqrt(order["amount"]),
+                            mu = order[1] * self.current_product.product["t_e"],
+                            varcoef = MACHINE_VARCOEF / np.sqrt(order[1]),
                             round = False
                         ) * SEC_PER_DAY
                         #using just the function gives the total time in days to produce an order. 
@@ -352,10 +356,10 @@ class Machine:
                         mu = self.current_product.product["t_r"],
                         varcoef = MACHINE_VARCOEF,
                         round = False
-                    ) * SEC_PER_DAY if self.last_product != order["product"] else 0
+                    ) * SEC_PER_DAY if self.last_product != order[0] else 0
                     # the same applies here as mentioned in the previous lognorm calculation
         # store the last product
-        self.last_product = order["product"]
+        self.last_product = order[0]
 
         # compare if total duration is smaller than the time left in a day
         if order_duration + setup_time <= self.total_time_day:
@@ -379,9 +383,9 @@ class Machine:
             # check if it is possible to store the produced quantity
             if self.warehouse.is_possible_to_store(order):
                 # produce the order and store it (remark: no "production" done here. It is assumed done in self.is_possible_to_produce)
-                self.warehouse.products[self.product_number].put(order["amount"])
+                self.warehouse.products[self.current_order[0]].put(order[1])
                 # to have the same length of lists for both inventories, add 0 to the other inventory
-                self.warehouse.products[1 - self.product_number].put(0)
+                self.warehouse.products[1 - self.current_order[0]].put(0)
                 # return 0 if the order was produced
                 return 0 #The order has been produced and stored successfully
             else:
@@ -402,11 +406,11 @@ class Machine:
         """
         
         # provide all material to demand and deduct the consumed amount from the inventory
-        max_material = self.warehouse.products[self.product_number].inventory_level[-1]
-        used_material, exit_code = self.warehouse.products[self.product_number].demand_class.fulfill(max_material, t)
+        max_material = self.warehouse.products[self.current_order[0]].inventory_level[-1]
+        used_material, exit_code = self.warehouse.products[self.current_order[0]].demand_class.fulfill(max_material, t)
         # deduct the used material from the inventory
-        self.warehouse.products[self.product_number].get(used_material)
+        self.warehouse.products[self.current_order[0]].get(used_material)
         # to have the same length of lists for both inventories, add 0 to the other inventory
-        self.warehouse.products[1 - self.product_number].get(0)
+        self.warehouse.products[1 - self.current_order[0]].get(0)
         # return the exit code
         return exit_code
