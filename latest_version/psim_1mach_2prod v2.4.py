@@ -17,25 +17,29 @@ Limitations:
 @author: ruekgauer
 
 Changelog:
-    V 1.0 17.4.23 Initial external version
-          24.4.23 minor adjustment: OEE is w/o setup time
-    V 1.1  2.5.23 Inventory init uses the very regime later required for sim
-                  at startup, an expected OEE is calculated
-    V 2.0 16.5.23 Demand determination changed to compounded Poisson
-                  process which better reflects reality. This requires major
-                  adjustments, therefore major revision change
-                  added demand and fulfillment tracking
-    V 2.1 19.6.23 added validated real demand data (former data error eliminated)
-          22.6.23 corrected forecast calculation offset error by introducing carryover
-                  minor fixes here and there
-                  corrected service level calc, skip d=0 incidences
-                  minor pythonizations all over the place
-                  dynamized main, added comments
-    V 2.2 26.6.23 adjusted demand data according to new information from client
-           6.7.23 Added some statistics: inv.n_put/n_get, dmnd.n_jobs
-    V 2.3  7.7.23 Fixed round and trunc errors in demand and forecast generation
-                  introduced functions for both for easier debugging
-                  OEE looks much better now, also number of prod jobs
+    V 1.0  17.4.23 Initial external version
+           24.4.23 minor adjustment: OEE is w/o setup time
+    V 1.1   2.5.23 Inventory init uses the very regime later required for sim
+                   at startup, an expected OEE is calculated
+    V 2.0  16.5.23 Demand determination changed to compounded Poisson
+                   process which better reflects reality. This requires major
+                   adjustments, therefore major revision change
+                   added demand and fulfillment tracking
+    V 2.1  19.6.23 added validated real demand data (former data error eliminated)
+           22.6.23 corrected forecast calculation offset error by introducing carryover
+                   minor fixes here and there
+                   corrected service level calc, skip d=0 incidences
+                   minor pythonizations all over the place
+                   dynamized main, added comments
+    V 2.2  26.6.23 adjusted demand data according to new information from client
+            6.7.23 Added some statistics: inv.n_put/n_get, dmnd.n_jobs
+    V 2.3   7.7.23 Fixed round and trunc errors in demand and forecast generation
+                   introduced functions for both for easier debugging
+                   OEE looks much better now, also number of prod jobs
+            8.7.23 Added "." for sim progress with progress_indicator process
+    V 2.4 21.11.23 Added four_weeks / FOW eoq model
+                   Minor bug fix in gen_fc and Inv init routine
+                   some cosmestic adjustments
 """
 
 """
@@ -54,7 +58,7 @@ FIFTEEN_MINUTES = ONE_DAY / HOURS_PER_DAY / 60 * 15
 """
 Definition of start and end of simulation
 """
-SIM_CYCLES = 360
+SIM_CYCLES = 500
 SIM_START = 0.0
 SIM_END = SIM_CYCLES * ONE_DAY
 
@@ -71,9 +75,9 @@ RBASE = 1000
 DAYS_FC = 180
 # span in periods used in case of fixed order period quantity determination:
 FOP_PERIODS = 30
-# var coef for machine execution per production step:
+# var coef for machine execution per propdution step:
 MACHINE_VARCOEF = 0.1
-# scheduling regime used herein, see definitions below:
+# scheduling regime used herein, see defitions below:
 SCHEDULING_REGIME = 'SPT'
 
 """
@@ -100,7 +104,7 @@ p1 = { \
     'irate'        : 0.1,  # inventory interest for eoq calc \
     't_e'          : 0.22 / SEC_PER_DAY,  # production time per piece in fractions of a day \
     't_r'          : 2.0 / HOURS_PER_DAY,  # setup time per batch in fractions of a day \
-    'eoq_mode'     : 'FOP' # which eoq model to use, definitions see below \
+    'eoq_mode'     : 'FOW' # which eoq model to use, definitions see below \
 }
 
 QUANT_MU = 978000 # product 2 is high amount, low volatility, medium uncertainty
@@ -116,7 +120,7 @@ p2 = { \
     'irate'        : 0.1,  \
     't_e'          : 0.11 / SEC_PER_DAY, \
     't_r'          : 2.0 / HOURS_PER_DAY, \
-    'eoq_mode'     : 'FOP' \
+    'eoq_mode'     : 'FOW' \
 }
  
 master_product_data = [p1, p2]
@@ -243,7 +247,7 @@ def gen_demands(d_mu, d_varcoef, d_t_mu, rbase, nextd, curtd, amount):
     curtd: current time step from last demand, is input and output
     amount: number of days, one element per day
     
-    6-7-23: created this function, fixed curtd counter to start at 1 instead of 0
+    6-7-23: created this function, fixed curtd counter to start at 1 insread of 0
     """
     new_demands = []
     for _ in range(amount):
@@ -269,6 +273,8 @@ def gen_fc(d, d_fc_noise, d_mu, d_varcoef, rbase):
     rbase: rounding base
  
     6-7-23: created this function, rewrote the code, not it miraculously works somehow!
+    11-21-23: minor, but dramatic little bug fix with carryover effect, NOW it
+              miraculously works!
     """
     forecasts = []
     # the problem is truncation to positive forecast numbers. to do so and preserve the
@@ -277,22 +283,30 @@ def gen_fc(d, d_fc_noise, d_mu, d_varcoef, rbase):
     for di in d:
         noise = round_to(d_fc_noise * (distri_int(d_mu, d_varcoef, 1.0) - d_mu), rbase) 
         fci = max(0, di + noise + trunc_carryover)
-        noise_carryover = min(0, di + noise + trunc_carryover)
+        trunc_carryover = min(0, di + noise + trunc_carryover)
         forecasts.append(fci)
     return forecasts
 
 """
 Validation:
-p = p2
-dmu = p['d_mu']
-vc = p['d_varcoef'] 
-dt = p['d_t_mu']
-rb = RBASE 
-noise = 1.0
-a, b, d = gen_demands(dmu, vc, dt, rb, 0, 0, 50000)
+dmu = 1000.0 # 1000 pieces with a variation of ...
+vc = 0.5     # vc = 0.5 ...
+dt = 3.0     # ... every 3 days and ...
+rb = 10      # ... a demand rounding base of 100 pcs.
+noise = 1.0  # fc noise level in vc
+_, _, d = gen_demands(dmu, vc, dt, rb, 0, 0, 20000)
 print(f'avg d = {sum(d)/len(d)}, should be {dmu/dt}')
+n_0 = 0
+n_not_0 = 0
+for di in d:
+    if di == 0:
+        n_0 += 1
+    else:
+        n_not_0 += 1
+print(f'dt actual = {n_0 / (n_not_0 - 1) + 1}, should be {dt}')
+print(f'dmu actual = {sum(d) / n_not_0}, should b {dmu}')
 f = gen_fc(d, noise, dmu, vc, rb)
-print(f'avg f = {sum(f)/len(f)}')
+print(f'avg f = {sum(f)/len(f)}, should be {dmu/dt}')
 """
 
 class Demand():
@@ -339,7 +353,7 @@ class Demand():
         self.ff = []          # fulfilled amount
         self.d = []           # past actual demanded recorded for debugging und display purposes only
         self.delta_bl = []    # delta backlog
-        self.env = env        # dto, just for analysis purposes
+        self.env = env        # dto, just for analysis puposes
         self.n_jobs = 0       # number of production jobs scheduled over time
 
         # initially build demand stream, 1st is current demand
@@ -369,7 +383,7 @@ class Demand():
             
     def fulfill(self, mat, allow_part_shipments) -> int:
         """
-        mat : material amount handed down to manage demand stream
+        mat : mateial amount handed down to manage demand stream
         allow_part_shipments : bool, allow for partial shipments or no
         return: material consumed for this step <= mat
         will remove demand (partially) fulfilled from front of demands list
@@ -377,7 +391,7 @@ class Demand():
         - if demand cannot be fulfilled due to material constraints,
           backlog is built up
         - backlog is processed first, the current demand
-        22.6.23: fixed step 2: only if demand > 0,otherwise the n_good counter is not correct
+        22.6.23: fixec step 2: only if demand > 0,otherwise the n_good counter is not correct
         """
         mat_used = 0
         bl0 = self.backlog
@@ -451,7 +465,9 @@ def eoq_dynamic(d, E_p, B_k, Z, mode) -> int:
     d: demand list
     mode: see below
     rest like eoq_static
-    6-20-23: fix for FOP: from d[0:x-1] to d[0:x]
+    6-20-23:  fix for FOP: from d[0:x-1] to d[0:x]
+    11-21-23: added FOW for four weeks of material, it is however almost 
+              identical to FOP = 28
     """
     if mode == 'Andler':
         # Andler, note this is not correct as the equation assumes constant demand
@@ -462,6 +478,12 @@ def eoq_dynamic(d, E_p, B_k, Z, mode) -> int:
     elif mode == 'FOP':
         # fixed order period
         return sum(d[0:min(FOP_PERIODS, len(d))])
+    elif mode == 'FOW':
+        # four week method utilized by ITW: add 4 weeks of stock
+        # calculate avg daily demand
+        avg_daily_dmnd = sum(d) / len(d)
+        # return 4 weeks of demand
+        return avg_daily_dmnd * DAYS_PER_WEEK * 4
     else:
         raise ValueError('{mode} not defined')
 
@@ -476,11 +498,13 @@ class Inventory():
       amount = rop - level, then this routine counts down replen_due and the
       fulfillment routine counts down replen_open
       
-    Inventory is always for one product
+    Invenory is always for one product
     
     from V1.1 it uses the same quantity regime as planning uses
     
     7-6-23: added n_put and n_get and related functionality
+    11-21-23: added some comments to describe what we actually do
+              minor bug fix on ROP
     """
     def __init__(self, d, env):
         """
@@ -490,10 +514,17 @@ class Inventory():
         p = d.p
         self.env = env
         self.t = [self.env.now]
+        # calculate economic quantity based on current conditions
         eoq = eoq_dynamic([d.demands[0]] + d.forecasts, \
                           p['E_p'], p['B_k'], p['irate'], p['eoq_mode'])
+        # set starting inventory at full: safety stock+ economic quantity
         self.levels = [p['safety_stock'] + eoq]
-        self.reorder_point = round(p['safety_stock'] + p['d_mu'] * (eoq * p['t_e'] + p['t_r']))
+        # set reorder point at safety stock + consumption rate x replenishment time
+        # with replenishment time per piece = setup time / current economic quanity x+ production time 
+        replen_time_per_cycle = eoq * p['t_e'] + p['t_r']
+        consumption_rate = p['d_mu'] / p['d_t_mu']
+        consump_per_replen_cycle = consumption_rate * replen_time_per_cycle 
+        self.reorder_point = round(p['safety_stock'] + consump_per_replen_cycle)
         self.replen_due = 0
         self.replen_open = 0
         self.n_put = 0
@@ -509,12 +540,13 @@ class Inventory():
         """
         provides the average inventory level (the last one in the list) 
         at any time
+        11-21-23 pytonized [-1]
         """
-        return self.levels[len(self.levels) - 1]
+        return self.levels[-1]
 
     def put(self, amount):
         """
-        adds given amount to inventory
+        adds given amount to inventor
         """
         assert amount >= 0, 'Inventory put amount must be >= 0' 
         self.t.append(self.env.now)
@@ -649,14 +681,14 @@ class ProdPlan():
         return dur, amount, inv
         
 """
-from here one the process wrappers
+from here on the process wrappers
 """
 
 def produce(env, pp):
     """ 
     simple process wrapper around production plan execution part and inventory update 
     runs a production plan, so it runs one machine
-    produce has no bucket, as it continously processes all jobs pending
+    produce has no bucket, as it continuesly processes all jobs pending
     """
     while True:
         dur, amount, inv = pp.produce()
@@ -695,6 +727,14 @@ def plan(env, pp, bucket):
         pp.plan(env.now)
         yield env.timeout(bucket)
 
+def progress_indicator(env, dur):
+    """
+    show that the simulation is still running ...
+    """
+    while True:
+        print('.', end = '')
+        yield env.timeout(dur)
+
 """
 finally the actual program
 """
@@ -706,7 +746,7 @@ if __name__ == '__main__':
 
     """
     22.6.23: dynamic version with as many products on one machine as given 
-             by the master product data list
+             my the master product data list
     """
     # init random engine
     random.seed(datetime.datetime.now().second)
@@ -736,6 +776,9 @@ if __name__ == '__main__':
     env.process(plan(env, pp, ONE_DAY))
     env.process(produce(env, pp))
     
+    # show that sim is still running
+    env.process(progress_indicator(env, ONE_DAY))
+    
     # run sim
     env.run(until = SIM_END)
     
@@ -747,10 +790,13 @@ if __name__ == '__main__':
         for i, (inv, p, di) in enumerate(zip(il, master_product_data, dl)):
 
             # plot inventory levels over time
-            plt.figure()
-            plt.plot(inv.t, inv.levels, label='inventory ' + str(i+1))
+            plt.figure(figsize=(8,8))
+            plt.plot(inv.t, inv.levels) # , label='inventory ' + str(i+1))
             plt.legend(loc = 'upper left')
-            plt.title('Inventory')
+            plt.title(f'Inventory {i+1}')
+            plt.xlabel('sim cyle = days')
+            plt.ylabel('amount')
+            plt.rcParams.update({'font.size': 8})
             plt.show()
             print(f'product {i+1}')
             # show actual avg inventory levels in pcs
@@ -772,13 +818,15 @@ if __name__ == '__main__':
             print(f'Actual service level demand {i+1} = {d.service_level()}')
 
             # plot demand, fulfillment, backlog
-            plt.figure() 
+            plt.figure(figsize=(8,8)) 
             plt.plot(d.t, d.d, label='demand')
-            #print('Demand d.d:', d.d)
             plt.plot(d.t, d.ff, label='fulfilled')
             plt.plot(d.t, d.delta_bl, label='delta backlog')
             plt.legend(loc = 'upper left')
             plt.title(f'Demand {i+1}')
+            plt.xlabel('sim cyle = days')
+            plt.ylabel('amount')
+            plt.rcParams.update({'font.size': 8})
             plt.show()
 
         # show actual OEE:
