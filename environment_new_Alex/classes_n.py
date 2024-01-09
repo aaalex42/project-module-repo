@@ -281,6 +281,7 @@ class Machine:
     This class is for a production plan and execution for one machine.
 
     Changes:
+        - 09.01.23: changed the structure of variable order
         - 28.12.23: changed the class completely. For more info, see readme
         - 11.12.23: No reorder point is considered. No eoq. 
         - 11.12.23: TODO: MAYBE NO SCHEDULING 
@@ -318,7 +319,7 @@ class Machine:
             return 0
         elif self.current_order["product"] == "p2":
             return 1
-        """
+    """
     
 
     def is_possible_to_produce(self, order):
