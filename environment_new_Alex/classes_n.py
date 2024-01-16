@@ -304,6 +304,7 @@ class Machine:
         self.current_product = None
         self.last_product = None
         self.current_order = None #keeps track of the current order
+        self.t = 0 #initialize the time step
         # ADD HERE MORE
 
     
@@ -397,7 +398,7 @@ class Machine:
             return 201 #The order has not been produced
     
 
-    def fulfill(self, t):
+    def fulfill(self):
         """
         This function fulfills the demand for a current product.
 
@@ -408,10 +409,12 @@ class Machine:
         
         # provide all material to demand and deduct the consumed amount from the inventory
         max_material = self.warehouse.products[self.current_order[0]].inventory_level[-1]
-        used_material, exit_code = self.warehouse.products[self.current_order[0]].demand_class.fulfill(max_material, t)
+        used_material, exit_code = self.warehouse.products[self.current_order[0]].demand_class.fulfill(max_material, self.t)
         # deduct the used material from the inventory
         self.warehouse.products[self.current_order[0]].get(used_material)
         # to have the same length of lists for both inventories, add 0 to the other inventory
         self.warehouse.products[1 - self.current_order[0]].get(0)
+        # increase the time step
+        self.t += 1
         # return the exit code
         return exit_code

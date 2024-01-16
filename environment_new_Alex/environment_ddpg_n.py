@@ -30,8 +30,8 @@ class Production_DDPG_Env(gym.Env):
         |-----|------------------|------|-----------------------|----------|
         | 0   | Inventory P1     | 0    | MAXIMUM_INVENTORY     | Discrete |
         | 1   | Inventory P2     | 0    | MAXIMUM_INVENTORY     | Discrete |
-        | 2   | Order product    | 0    | 1                     | Discrete |
-        | 3   | Order quantity   | 0    | MAXIMUM_INVENTORY / 2 | Discrete |
+        | 2   | Demand p1        | 0    | MAXIMUM_INVENTORY / 2 | Discrete |
+        | 3   | Demand p2        | 0    | MAXIMUM_INVENTORY / 2 | Discrete |
 
     ### Reward:
         The reward function is defined as:
@@ -49,7 +49,7 @@ class Production_DDPG_Env(gym.Env):
     """
     def __init__(self):
         self.action_space = spaces.MultiDiscrete([2, MAXIMUM_INVENTORY])
-        self.observation_space = spaces.MultiDiscrete([MAXIMUM_INVENTORY, MAXIMUM_INVENTORY, 2, MAXIMUM_INVENTORY / 2])
+        self.observation_space = spaces.MultiDiscrete([MAXIMUM_INVENTORY, MAXIMUM_INVENTORY, MAXIMUM_INVENTORY / 2, MAXIMUM_INVENTORY / 2])
 
         #initialize the demands, inventories, warehouse and machine
         self.machine = Machine(
@@ -60,19 +60,60 @@ class Production_DDPG_Env(gym.Env):
         )
 
 
-    def step(self, action):
+    def step(self, action): 
         assert self.action_space.contains(action)
 
+        terminated = False
+
+        #check if maximum warehouse level is exceeded, or inventory is negative
+        #for both cases, the game ends with negative reward
+        """CHECK IF IT IS EVEN POSSIBLE TO HAVE NEGATIVE INVENTORY OR EXCEED MAXIMUM WAREHOUSE LEVEL"""
+        if self.machine.warehouse.current_warehouse_level > MAXIMUM_INVENTORY   \
+                or self.machine.warehouse.products[0].inventory_level[-1] < 0   \
+                or self.machine.warehouse.products[1].inventory_level[-1] < 0:
+            #GIVE NEGATIVE REWARD (if necessary) and RESTART THE GAME
+            reward = -1
+            terminated = True
 
 
+        exit_code_prod = self.machine.produce(action)
+        exit_code_fulf = self.machine.fulfill()
+        #check if an order can be produced and stored
+        if exit_code_prod == 0:
+            reward, terminated = self.check_fulfill(exit_code_fulf)
+        
+        elif exit_code_prod == 101: # the order can be produced, but not stored
+            reward = -1
+            terminated = True #meaning that the maximum warehouse level is exceeded
+        
+        else: 
+            #for the cases when exit code for production is 201
+            reward, terminated = self.check_fulfill(exit_code_fulf)
+
+        #return observation, reward, terminated, False, {}
+        return self._get_obs(), reward, terminated, False, {}
 
 
     def _get_obs(self):
-        pass
+        return (self.machine.warehouse.products[0].inventory_level[-1],
+                self.machine.warehouse.products[1].inventory_level[-1], 
+                self.machine.warehouse.products[0].demand_class.demand[self.machine.t],
+                self.machine.warehouse.products[1].demand_class.demand[self.machine.t]
+                )
 
 
-    def reset(self):
-        pass
+    def reset(self, seed = None, options = None):
+        super().reset(seed = seed)
+
+        #reset the demands, inventories, warehouse and machine
+        self.machine = Machine(
+            Warehouse(
+                Inventory(Demand(P1)),
+                Inventory(Demand(P2))
+            )
+        )
+
+        return self._get_obs(), {}
 
 
     def render(self):
@@ -81,3 +122,23 @@ class Production_DDPG_Env(gym.Env):
 
     def close(self):
         pass
+
+
+    def check_fulfill(self, exit_code):
+        terminated = False
+        #check if an order can be fulfilled
+        if exit_code == 11:
+            #give positive reward
+            reward = 1 - self.machine.warehouse.current_warehouse_level / MAXIMUM_INVENTORY
+        
+        # if there is no demand
+        elif exit_code == 10:
+            reward = 0
+        
+        # if the order cannot be fulfilled
+        elif exit_code == 12: #or just else
+            reward = -1
+            # HERE A GAME SHOULD END
+            terminated = True
+        
+        return reward, terminated

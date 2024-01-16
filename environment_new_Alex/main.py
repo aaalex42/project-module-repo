@@ -26,7 +26,7 @@ SIM_END = SIM_CYCLES * ONE_DAY
 # Type of the distribution to generate random data
 DISTRIBUTION_TYPE = "lognorm"
 # If it is possible to provide partial shipments or not
-ALLOW_PARTIAL_SHIPMENTS = True
+ALLOW_PARTIAL_SHIPMENTS = False #True will not affect any code, since the environment is built differently
 # Rounding base for generating demands and forecasts
 ROUNDING_BASE = 1000                                                    #WHY IS 1000 HERE INSTEAD OF 100?
 # Number of days for calculating the forecast
