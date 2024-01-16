@@ -109,7 +109,7 @@ def gen_demands(d_mu, d_varcoef, d_t_mu, fcast_period):
     # fill the demands with the poisson values
     demands[poisson_idx] = lognorm_int(d_mu, d_varcoef, size = len(poisson_idx))
 
-    return demands
+    return demands.astype(np.uint32)
 
 # FUNCTION gen_fc IS NOT IMPLEMENTED AS A VECTORIZED ONE, BECAUSE IT IS NOT USED IN THE CODE LATER AND IT IS NOT RELEVANT FOR THE EXPERIMENT
 
