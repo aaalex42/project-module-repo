@@ -269,7 +269,7 @@ class Warehouse:
         This function checks if it is possible to store a given amount for a product in the warehouse.
         """
 
-        if self.current_warehouse_level + order[1] <= MAXIMUM_INVENTORY:
+        if self.current_warehouse_level + order[0] + self.current_warehouse_level  <= MAXIMUM_INVENTORY:
             return True
         else:
             return False
@@ -335,36 +335,65 @@ class Machine:
                 "product": "p1" or "p2",
                 "amount": amount as integer
             }
-            NEW: 
+            OLD: 
             order = [0 or 1 for product number, amount as integer]
+
+            NEW:
+            order = [order_amount_product1, order_amount_product2]
         
         """ 
 
         #store the current order
         self.current_order = order
-        # set the current product
-        self.current_product = self.products[self.current_order[0]]
+
+        # set the current product        
+        #self.current_product = self.products[self.current_order[0]]
         
-        order_duration = lognorm_int(
-                            mu = order[1] * self.current_product.product["t_e"],
-                            varcoef = MACHINE_VARCOEF / np.sqrt(order[1]),
+        order_duration_product_1 = lognorm_int(
+                            mu = order[0] * P1["t_e"],
+                            varcoef = MACHINE_VARCOEF / np.sqrt(order[0]),
                             round = False
                         ) * SEC_PER_DAY
                         #using just the function gives the total time in days to produce an order. 
                         #It is necessary to multiply by number of seconds in a day.
         
+        order_duration_product_2 = lognorm_int(
+                            mu = order[1] * P2["t_e"],
+                            varcoef = MACHINE_VARCOEF / np.sqrt(order[1]),
+                            round = False
+                        ) * SEC_PER_DAY
+
+        
         # calculate the setup time
-        setup_time = lognorm_int(
-                        mu = self.current_product.product["t_r"],
+        setup_time_product_1 = lognorm_int(
+                        mu = P1["t_r"],
                         varcoef = MACHINE_VARCOEF,
                         round = False
-                    ) * SEC_PER_DAY if self.last_product != order[0] else 0
+                    ) * SEC_PER_DAY 
                     # the same applies here as mentioned in the previous lognorm calculation
         # store the last product
-        self.last_product = order[0]
+        self.last_product = 0
+
+        # calculate the setup time
+        setup_time_product_2 = lognorm_int(
+                        mu = P2["t_r"],
+                        varcoef = MACHINE_VARCOEF,
+                        round = False
+                    ) * SEC_PER_DAY 
+                    # the same applies here as mentioned in the previous lognorm calculation
+        # store the last product
+        self.last_product = 1
+
+        # calculate the total duration
+        order_duration = order_duration_product_1 + order_duration_product_2
+        # calculate the setup time
+        setup_time = setup_time_product_1 + setup_time_product_2
+        # calculate total time
+        total_time = order_duration + setup_time
+
 
         # compare if total duration is smaller than the time left in a day
-        if order_duration + setup_time <= self.total_time_day:
+        if total_time <= self.total_time_day:
             return True
         else:
             return False
@@ -385,9 +414,16 @@ class Machine:
             # check if it is possible to store the produced quantity
             if self.warehouse.is_possible_to_store(order):
                 # produce the order and store it (remark: no "production" done here. It is assumed done in self.is_possible_to_produce)
-                self.warehouse.products[self.current_order[0]].put(order[1])
-                # to have the same length of lists for both inventories, add 0 to the other inventory
-                self.warehouse.products[1 - self.current_order[0]].put(0)
+                
+                #both products are produced at the same time and stored in the warehouse
+                self.warehouse.products[0].put(order[0])
+                self.warehouse.products[1].put(order[0])
+
+                # to have the same length of lists for both inventories, add 0 to the other inventory                
+                #both products
+                self.warehouse.products[0].put(0)
+                self.warehouse.products[1].put(0)
+
                 # return 0 if the order was produced
                 return 0 #The order has been produced and stored successfully
             else:
@@ -408,13 +444,23 @@ class Machine:
         """
         
         # provide all material to demand and deduct the consumed amount from the inventory
-        max_material = self.warehouse.products[self.current_order[0]].inventory_level[-1]
-        used_material, exit_code = self.warehouse.products[self.current_order[0]].demand_class.fulfill(max_material, self.t)
+        max_material_product_1 = self.warehouse.products[0].inventory_level[-1]
+        max_material_product_2 = self.warehouse.products[1].inventory_level[-1]
+        max_material = [max_material_product_1, max_material_product_2]
+
+        used_material_1, exit_code_1 = self.warehouse.products[0].demand_class.fulfill(max_material[0], self.t)
+        used_material_2, exit_code_2 = self.warehouse.products[1].demand_class.fulfill(max_material[1], self.t)
+        used_material = [used_material_1, used_material_2]
+
         # deduct the used material from the inventory
-        self.warehouse.products[self.current_order[0]].get(used_material)
+        self.warehouse.products[0].get(used_material[0])
+        self.warehouse.products[1].get(used_material[1])
+
         # to have the same length of lists for both inventories, add 0 to the other inventory
-        self.warehouse.products[1 - self.current_order[0]].get(0)
+        self.warehouse.products[0].get(0)
+        self.warehouse.products[1].get(0)
+
         # increase the time step
         self.t += 1
         # return the exit code
-        return exit_code
+        return exit_code_1, exit_code_2

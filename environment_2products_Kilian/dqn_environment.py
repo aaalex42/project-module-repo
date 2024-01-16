@@ -35,12 +35,7 @@ class Production_DQN_Env(gym.Env):
         Executes one time step within the environment.
         """
         #check if action is valid
-        assert self.action_space.contains(action)
-
-        #get new demand
-        
-        #production order
-        
+        assert self.action_space.contains(action)            
         
         #execute order
         self.machine.produce(action)
@@ -91,6 +86,14 @@ class Production_DQN_Env(gym.Env):
 
 
     def reset(self):
+
+        #initialize the demands, inventories, warehouse and machine
+        self.machine = Machine(
+            Warehouse(
+                Inventory(Demand(P1)),
+                Inventory(Demand(P2))
+            )
+        )
         pass
 
 
