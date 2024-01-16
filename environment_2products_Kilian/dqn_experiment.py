@@ -10,3 +10,4 @@ agent = DQNAgent(env.observation_space, env.action_space)
 action = [1000,2000]
 
 env.step(action)
+
