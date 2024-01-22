@@ -2,8 +2,8 @@ import torch
 import torch.autograd
 import torch.optim as optim
 import torch.nn as nn
-from ddpg_models import *
-from ddpg_utils import *
+from ddpg.ddpg_models import *
+from ddpg.ddpg_utils import *
 
 class DDPGagent:
     def __init__(self, env, hidden_size=256, actor_learning_rate=1e-4, critic_learning_rate=1e-3, gamma=0.99, tau=1e-2, max_memory_size=50000):
@@ -32,18 +32,19 @@ class DDPGagent:
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_learning_rate)
     
     def get_action(self, state):
-        state = Variable(torch.from_numpy(state).float().unsqueeze(0))
+        #print("State", torch.tensor(state, dtype=torch.int32))
+        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
         action = self.actor.forward(state)
-        action = action.detach().numpy()[0,0]
-        return action
+        action = action.view(-1,2).detach().numpy().astype(np.int32)
+        return action[0]
     
     def update(self, batch_size):
         states, actions, rewards, next_states, _ = self.memory.sample(batch_size)
         states = torch.FloatTensor(states)
-        actions = torch.FloatTensor(actions)
+        actions = torch.FloatTensor(actions) #.transpose(0,1) # CHANGE HERE IF NECESSARY
         rewards = torch.FloatTensor(rewards)
         next_states = torch.FloatTensor(next_states)
-    
+
         # Critic loss        
         Qvals = self.critic.forward(states, actions)
         next_actions = self.actor_target.forward(next_states)

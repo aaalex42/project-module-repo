@@ -1,3 +1,8 @@
+"""
+Changes:
+    - 20.01.24: Added -1 to the clip in get_action
+"""
+
 import numpy as np
 import gym
 from collections import deque
@@ -5,7 +10,7 @@ import random
 
 # Gaussian noise
 class GaussianNoise:
-    def __init__(self, action_space, mu = 0, sigma = 5) -> None: 
+    def __init__(self, action_space, mu = 0, sigma = 2) -> None: 
         # a big sigma is necessary for rounding to integer after predicting
         self.mu = mu
         self.sigma = sigma
@@ -15,8 +20,8 @@ class GaussianNoise:
     def get_action(self, action):
         noise = np.random.normal(self.mu, self.sigma)
         return np.array(
-            [action[0], np.round(np.clip(action[1] + noise, 0, self.action_space[1].n)) ]
-        )
+            [action[0], np.round(np.clip(action[1] + noise, 0, self.action_space[1].n - 1)) ]
+        ).astype(int)
         
 
 class Memory:

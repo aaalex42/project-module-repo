@@ -1,6 +1,8 @@
+"""NOT WORKING AFTER CHANGES IN classes_n.py"""
+
 import gym 
 from gym import spaces
-from main import *
+from init_vars import *
 from classes_n import *
 
 
