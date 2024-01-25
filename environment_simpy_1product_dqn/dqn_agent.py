@@ -21,11 +21,13 @@ plt.ion()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("device is set to: ", device)
 
+
+# Transition is a named tuple representing a single transition in our environment.
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
 
 class ReplayMemory(object):
-
+    """A cyclic buffer of bounded size that holds the transitions observed recently."""
     def __init__(self, capacity):
         self.memory = deque([], maxlen=capacity)
 
@@ -40,6 +42,7 @@ class ReplayMemory(object):
         return len(self.memory)
     
 class DQN(nn.Module):
+    """A simple fully connected neural network with 3 layers"""
 
     def __init__(self, n_observations, n_actions):
         super(DQN, self).__init__()
@@ -75,7 +78,7 @@ class DQNAgent:
         self.device = device
         self.num_episodes = num_episodes
 
-    # Get number of actions from gym action space
+        # Get number of actions from gym action space
         self.n_actions = env.action_space.n
 
         # Get the number of observations from the gym env
@@ -93,7 +96,7 @@ class DQNAgent:
         self.episode_durations = []
         self.total_reward = 0
 
-    #special vars
+        #for plotting
         self.inventory_levels = []
         self.total_rewards = []
 
@@ -187,10 +190,10 @@ class DQNAgent:
 
 
 
-    def train(self, num_episodes=1000):
+    def train(self):
         if torch.cuda.is_available():
             print("Using GPU")
-            num_episodes = num_episodes
+            num_episodes = self.num_episodes
         else:
             num_episodes = 50
         
@@ -240,7 +243,7 @@ class DQNAgent:
         color1 = 'tab:blue'
         color2 = 'tab:green'
 
-        ax1.set_xlabel('Episode')
+        ax1.set_xlabel('Simulation Steps')
         ax1.set_ylabel('Inventory Level', color=color1)
         ax1.plot(inventory_levels, color=color1)
         ax1.tick_params(axis='y', labelcolor=color1)
@@ -251,7 +254,8 @@ class DQNAgent:
         ax2.tick_params(axis='y', labelcolor=color2)
 
         fig.tight_layout()  # otherwise the right y-label is slightly clipped
-        
+        plt.show()
+
 
         print("total_rewards: ", total_rewards)
         print("Complete")

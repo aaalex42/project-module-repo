@@ -15,7 +15,7 @@ from gym import spaces
 import matplotlib.pyplot as plt
 import random
 
-SIM_CYCLES = 5002
+SIM_CYCLES = 100002
 SIM_START = 0.0
 SIM_END = SIM_CYCLES * sim.ONE_DAY
 
@@ -191,7 +191,7 @@ class InventoryManagementEnv(gym.Env):
 
         # Check if the episode is done
         terminated = self.env.now >= SIM_END #stops if simulation ends or overstock (add maybe later different termination rules)
-        truncated = self.step_count >= 100 #stops if episode lasts longer than 100 simulations/days    
+        truncated = self.step_count >= 100 #stops if episode lasts longer than 100 simulations/days; Statement is needed, because otherwise learning takes too long
         
         # Positive reward for meeting or exceeding the service level target/no backlog
         reward = 0
