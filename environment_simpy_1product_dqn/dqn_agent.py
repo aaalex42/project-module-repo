@@ -208,7 +208,8 @@ class DQNAgent:
                 observation, reward, terminated, truncated, _ = self.env.step(action.item())                
                 self.total_reward += reward
                 reward = torch.tensor([reward], device=device)                
-                self.inventory_levels.append(observation[0])        
+                self.inventory_levels.append(observation[0])
+                self.total_rewards.append(self.total_reward)        
                 done = terminated or truncated
                 if terminated:
                     next_state = None
@@ -235,7 +236,7 @@ class DQNAgent:
                     self.episode_durations.append(t + 1)
                     break
 
-        return self.total_reward, self.inventory_levels, self.episode_durations
+        return self.total_rewards, self.inventory_levels, self.episode_durations
     
     def plot_rewards(self, total_rewards, inventory_levels):
         fig, ax1 = plt.subplots()
@@ -257,7 +258,7 @@ class DQNAgent:
         plt.show()
 
 
-        print("total_rewards: ", total_rewards)
+        print("total_rewards: ", total_rewards[-1])
         print("Complete")
         self.plot_durations(show_result=True)
         plt.ioff()

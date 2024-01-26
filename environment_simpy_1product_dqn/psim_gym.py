@@ -191,7 +191,7 @@ class InventoryManagementEnv(gym.Env):
 
         # Check if the episode is done
         terminated = self.env.now >= SIM_END #stops if simulation ends or overstock (add maybe later different termination rules)
-        truncated = self.step_count >= 100 #stops if episode lasts longer than 100 simulations/days; Statement is needed, because otherwise learning takes too long
+        truncated = self.step_count >= 50 #stops if episode lasts longer than 100 simulations/days; Statement is needed, because otherwise learning takes too long
         
         # Positive reward for meeting or exceeding the service level target/no backlog
         reward = 0
