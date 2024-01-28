@@ -1,6 +1,6 @@
 import numpy as np
 import random
-from main import DAYS_PER_YEAR, FOP_PERIODS, DAYS_PER_WEEK
+from init_vars import DAYS_PER_YEAR, FOP_PERIODS, DAYS_PER_WEEK
 
 """
 TODO:
