@@ -84,7 +84,7 @@ class Production_DQN_Env(gym.Env):
         self.step_count += 1
         
         
-        if self.step_count >= 180:
+        if self.step_count >= 100000000000:
             truncated = True
         else:
             truncated = False
@@ -141,6 +141,7 @@ class Production_DQN_Env(gym.Env):
         print("step: ", self.step_count)
         print(f' observation {self._get_obs()},    reward: {reward:.3f}, terminated: {terminated}, truncated: {truncated}')
         #return observation, reward, terminated, False, {}
+        
         return self._get_obs(), reward, terminated, truncated, False, {}
 
 

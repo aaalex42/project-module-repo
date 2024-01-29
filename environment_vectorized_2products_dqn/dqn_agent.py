@@ -237,7 +237,8 @@ class DQNAgent:
             for t in count():
                 action = self.select_action(state)
                 #print(action)
-                observation, reward, terminated, truncated, _, _ = self.env.step(action)                              
+                observation, reward, terminated, truncated, _, _ = self.env.step(action)       
+                self.env.inc_t()                       
                 self.total_reward += reward
                 reward = torch.tensor([reward], device=device)                
                 self.inventory_levels.append(observation[0])
