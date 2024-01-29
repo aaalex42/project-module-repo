@@ -1,7 +1,26 @@
 import gym 
 from gym import spaces
+from gym.core import Env
 from init_vars import *
 from classes_n import *
+
+
+class SkipStep(gym.Wrapper):
+    def __init__(self, env: Env, skip: int):
+        super().__init__(env)
+        self._skip = skip
+    
+    def step(self, action):
+        """Repeat an action and sum the reward"""
+        total_reward = 0.0
+        for i in range(self._skip):
+            #Accumulate the reward and repeat the same action
+            obs, reward, done, _, _ = self.env.step(action)
+            total_reward += reward
+            self.env.inc_t()
+            if done:
+                break
+        return obs, total_reward, done, {}, {}
 
 
 class Production_DQN_Env(gym.Env):

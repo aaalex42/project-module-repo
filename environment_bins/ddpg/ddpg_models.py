@@ -58,7 +58,7 @@ class Actor(nn.Module):
         p = torch.round(self.sigmoid(x[:, 0])).unsqueeze(0)
         qty = self.sigmoid_2(x[:, 1])
         #print("qty_0", qty)
-        qty = ((MAXIMUM_INVENTORY // BIN_SIZE // 10) * qty).unsqueeze(0) #torch.clamp(self.relu(x[:, 1]), max=MAXIMUM_INVENTORY // BIN_SIZE).unsqueeze(0)
+        qty = ((MAXIMUM_INVENTORY // BIN_SIZE) * qty).unsqueeze(0) #torch.clamp(self.relu(x[:, 1]), max=MAXIMUM_INVENTORY // BIN_SIZE).unsqueeze(0)
 
         #print("qty", qty)
 

@@ -53,9 +53,9 @@ Inventory more:
     - 1: Initial amount = safety stock
     - 2: Initial amount = safery stock + static eoq
 """
-INVENTORY_MODE = 2
+INVENTORY_MODE = 1
 # Maximum level of inventory for both products 
-MAXIMUM_INVENTORY = 50_000_000
+MAXIMUM_INVENTORY = 15_000_000
 
 """
 There are only 2 products in this simulation. 
