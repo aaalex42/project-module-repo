@@ -67,20 +67,24 @@ class Production_DQN_Env(gym.Env):
         #for displaying the information
         self.verbose = verbose
 
+        self.step_count = 0
+
 
     def step(self, action): 
         #action_np = action.cpu().numpy() #convert tensor to numpy array because assert statement does not work with tensors      
         
         #print(action)
         #check if action is in the action space Multidiscrete [(product id and quantity)]
-        print(self.action_space)
-        assert self.action_space.contains((action[0].item(), action[1].item()))
+        #print(self.action_space)
+        #print(action[0].item(), action[1].item())
+        assert self.action_space.contains([action[0].item(), action[1].item()])
         
-
-        step_count = 0
-        step_count += 1
         
-        if step_count >= 180:
+        
+        self.step_count += 1
+        
+        
+        if self.step_count >= 180:
             truncated = True
         else:
             truncated = False
@@ -134,6 +138,8 @@ class Production_DQN_Env(gym.Env):
             reward = -1
             terminated = True
         
+        print("step: ", self.step_count)
+        print(f' observation {self._get_obs()},    reward: {reward:.3f}, terminated: {terminated}, truncated: {truncated}')
         #return observation, reward, terminated, False, {}
         return self._get_obs(), reward, terminated, truncated, False, {}
 

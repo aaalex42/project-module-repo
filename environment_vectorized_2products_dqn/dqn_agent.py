@@ -116,7 +116,7 @@ class DQNAgent:
     def select_action(self, state):
         global steps_done
         sample = random.random()
-        max_order_amount = self.env.action_space.nvec[1]
+        max_order_amount = self.env.action_space.nvec[1] - 1
         eps_threshold = self.EPS_END + (self.EPS_START - self.EPS_END) * \
             math.exp(-1. * self.steps_done / self.EPS_DECAY)
         self.steps_done += 1
@@ -126,11 +126,11 @@ class DQNAgent:
                 product_id = out_product.max(1).indices.view(1, 1)
                 order_amount = (torch.sigmoid(out_order) * max_order_amount).view(1,1).round().long()
                 action = torch.cat((product_id, order_amount), dim=1)
-                print('Network output: ')
-                return action
+                #print('Network output: ')
+                return action.squeeze()
         else:
             #print('Random action: ', torch.tensor(self.env.action_space.sample(), device=self.device, dtype=torch.long))          
-            print('Random action: ')
+            #print('Random action: ')
             return torch.tensor(self.env.action_space.sample(), device=self.device, dtype=torch.long)
 
     def plot_durations(self, show_result=False):
@@ -178,13 +178,21 @@ class DQNAgent:
         non_final_next_states = torch.cat([s for s in batch.next_state
                                                     if s is not None])
         state_batch = torch.cat(batch.state)
-        action_batch = torch.cat(batch.action)
+        action_batch = torch.cat(batch.action).view(-1, 2, 1) #same dimension as the output of the network
+        action_batch = action_batch[:, :1, :] #use only the first column is the product id to get same dimension as the output of the network	
         reward_batch = torch.cat(batch.reward)
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
         # for each batch state according to policy_net
-        state_action_values = self.policy_net(state_batch).gather(1, action_batch)
+        
+        out_product, out_order = self.policy_net(state_batch)
+        out = torch.cat((out_product.unsqueeze(-1), out_order.unsqueeze(-1)), dim=-1)
+        # Assuming action_batch is a [BATCH_SIZE x 2] tensor where the first column
+        # contains the indices for out_product and the second column contains the indices for out_order
+        state_action_values = out.gather(2, action_batch).squeeze(-1)
+        
+        #state_action_values = self.policy_net(state_batch).gather(1, action_batch)
 
         # Compute V(s_{t+1}) for all next states.
         # Expected values of actions for non_final_next_states are computed based
@@ -193,7 +201,9 @@ class DQNAgent:
         # state value or 0 in case the state was final.
         next_state_values = torch.zeros(self.BATCH_SIZE, device=device)
         with torch.no_grad():
-            next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values
+            out_product, out_order = self.target_net(non_final_next_states)
+            next_state_values[non_final_mask] = out_product.max(1).values
+            #next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values
         # Compute the expected Q values
         expected_state_action_values = (next_state_values * self.GAMMA) + reward_batch
 
@@ -226,7 +236,7 @@ class DQNAgent:
             state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
             for t in count():
                 action = self.select_action(state)
-                print(action)
+                #print(action)
                 observation, reward, terminated, truncated, _, _ = self.env.step(action)                              
                 self.total_reward += reward
                 reward = torch.tensor([reward], device=device)                
