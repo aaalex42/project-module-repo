@@ -3,6 +3,7 @@ from gym import spaces
 from init_vars import *
 from classes_n import *
 import numpy as np
+from gym.core import Env
 
 
 class Production_DQN_Env(gym.Env):
@@ -84,7 +85,7 @@ class Production_DQN_Env(gym.Env):
         self.step_count += 1
         
         
-        if self.step_count >= 100000000000:
+        if self.step_count >= 5000: #5000 days
             truncated = True
         else:
             truncated = False
@@ -179,3 +180,20 @@ class Production_DQN_Env(gym.Env):
     
     def inc_t(self):
         self.machine.t += 1
+
+class SkipStep(gym.Wrapper):
+    def __init__(self, env: Env, skip: int):
+        super().__init__(env)
+        self._skip = skip
+    
+    def step(self, action):
+        """Repeat an action and sum the reward"""
+        total_reward = 0.0
+        for i in range(self._skip):
+            #Accumulate the reward and repeat the same action
+            obs, reward, done, truncated, _, _  = self.env.step(action)
+            total_reward += reward
+            self.env.inc_t()
+            if done:
+                break
+        return obs, total_reward, done, truncated, {}, {}
