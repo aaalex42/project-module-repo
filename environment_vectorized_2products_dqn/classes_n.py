@@ -7,7 +7,7 @@ TODO:
 """
 
 from base_functions_n import *
-from main import *
+from init_vars import *
 
 
 class Demand:
@@ -36,7 +36,7 @@ class Demand:
 
     def __init__(self, product):
         self.product = product            # product description
-        self.n_good = 0                   # number of fulfilled orders
+        self.n_good = 1                   # number of fulfilled orders, starting with 1 to have 1.0 service level at the beginning
         self.n_bad = 0                    # number of not fulfilled orders
         self.backlog = 0                  # backlog is the amount of demand that is not fulfilled
         self.demand = gen_demands(        # generate the demand here with the vectorized function
@@ -64,7 +64,7 @@ class Demand:
             No. good shipments (full amount and in time) / No. of all shipments
         """
 
-        return self.n_good / (self.n_good + self.n_bad)
+        return self.n_good / (self.n_good + self.n_bad + 10e-10)
     
 
     @property
@@ -104,7 +104,7 @@ class Demand:
         """
 
         # set a variable to store if the fulfillment was successful
-        exit_code = 10
+        exit_code = 100
         # set a variable to track the material consumed
         material_used = 0
         # store the initial backlog
@@ -136,12 +136,12 @@ class Demand:
                 material_used += self.demand[t]
                 # Increase the number of fulfilled orders
                 self.n_good += 1
-                # Exit code 11: the demand was fulfilled
-                exit_code = 11
+                # Exit code 101: the demand was fulfilled
+                exit_code = 101
             
             else:
-                # Exit code 12: the demand was not fulfilled
-                exit_code = 12
+                # Exit code 102: the demand was not fulfilled
+                exit_code = 102
                 # Increase the number of not fulfilled orders
                 self.n_bad += 1
                 # Check if partial shipments are allowed
@@ -206,6 +206,7 @@ class Inventory:
             self.inventory_level = [int(self.product["safety_stock"] + self.demand_class.eoq)]
 
         # ADD HERE MORE n_put and n_get if necessary
+            
 
 
     @property
@@ -269,7 +270,7 @@ class Warehouse:
         This function checks if it is possible to store a given amount for a product in the warehouse.
         """
 
-        if self.current_warehouse_level + order[0] + self.current_warehouse_level  <= MAXIMUM_INVENTORY:
+        if self.current_warehouse_level + order[1] <= MAXIMUM_INVENTORY:
             return True
         else:
             return False
@@ -281,7 +282,8 @@ class Machine:
     This class is for a production plan and execution for one machine.
 
     Changes:
-        - 09.01.23: changed the structure of variable order
+        - 17.01.24: function is_possible_to_produce is not used anymore
+        - 09.01.24: changed the structure of variable order
         - 28.12.23: changed the class completely. For more info, see readme
         - 11.12.23: No reorder point is considered. No eoq. 
         - 11.12.23: TODO: MAYBE NO SCHEDULING 
@@ -304,7 +306,8 @@ class Machine:
         self.current_product = None
         self.last_product = None
         self.current_order = None #keeps track of the current order
-        self.t = 0 #initialize the time step
+        self.t = 0 #initialize the time step. In a day, there are 24 time steps
+        self.finish_time = 0 #initialize the finish time of a current order
         # ADD HERE MORE
 
     
@@ -321,10 +324,77 @@ class Machine:
         elif self.current_order["product"] == "p2":
             return 1
     """
-    
-
-    def is_possible_to_produce(self, order):
+    def check_if_machine_free(self):
         """
+        This function checks if the machine is free to produce a new order.
+        """
+        
+        if self.current_order == None or self.t >= self.finish_time:
+            return 1 #True # the machine is free
+        else:
+            return 0 #False # the machine is busy
+        
+    
+    def produce(self, order):
+        #check first if the machine is free
+        if self.check_if_machine_free():
+            # produce the order
+            self.current_order = order
+            
+            # set the current product
+            self.current_product = self.products[self.current_order[0]]
+            # calculate the order duration
+            order_duration = lognorm_int(
+                                mu = order[1] * self.current_product.product["t_e"],
+                                varcoef = MACHINE_VARCOEF / np.sqrt(order[1]),
+                                round = False
+                            ) * HOURS_PER_DAY
+                            #using just the function gives the total time in days to produce an order. 
+            # calculate the setup time
+            setup_time = lognorm_int(
+                            mu = self.current_product.product["t_r"],
+                            varcoef = MACHINE_VARCOEF,
+                            round = False
+                        ) * HOURS_PER_DAY if self.last_product != order[0] else 0
+                        # the same applies here as mentioned in the previous lognorm calculation
+            # calculate the finish time
+            self.finish_time = self.t + order_duration + setup_time
+            # store the last product
+            self.last_product = order[0]
+            """
+            # place the produced quantity in the warehouse only after finishing the order!
+            self.warehouse.products[self.current_order[0]].put(order[1])
+            # to have the same length of lists for both inventories, add 0 to the other inventory
+            self.warehouse.products[1 - self.current_order[0]].put(0)
+            """
+            #increase the time step
+            #self.t += 1
+
+            # return 0 if the production has started 
+            return 0
+                            
+        else:
+            #increase the time step
+            #self.t += 1
+
+            # return an error code
+            return 10 # the machine is busy
+        
+
+    def store_production(self):
+        if self.t >= self.finish_time:
+            # place the produced quantity in the warehouse only after finishing the order!
+            self.warehouse.products[self.current_order[0]].put(self.current_order[1])
+            # to have the same length of lists for both inventories, add 0 to the other inventory
+            self.warehouse.products[1 - self.current_order[0]].put(0)
+            return 0 # the production has been stored#
+        
+        else:
+            return 10 # the production has not been stored yet
+
+
+    """def is_possible_to_produce(self, order): # NOT USED ANYMORE
+        ###
         This function checks if it is possible to produce a given order in a day
             by comparing the time left in a day and the time needed for the order.
         Check the setup time too, if the product produced on the previous day is different.
@@ -335,76 +405,47 @@ class Machine:
                 "product": "p1" or "p2",
                 "amount": amount as integer
             }
-            OLD: 
+            NEW: 
             order = [0 or 1 for product number, amount as integer]
-
-            NEW:
-            order = [order_amount_product1, order_amount_product2]
+        ###
         
-        """ 
 
         #store the current order
         self.current_order = order
-
-        # set the current product        
-        #self.current_product = self.products[self.current_order[0]]
+        # set the current product
+        self.current_product = self.products[self.current_order[0]]
         
-        order_duration_product_1 = lognorm_int(
-                            mu = order[0] * P1["t_e"],
-                            varcoef = MACHINE_VARCOEF / np.sqrt(order[0]),
+        order_duration = lognorm_int(
+                            mu = order[1] * self.current_product.product["t_e"],
+                            varcoef = MACHINE_VARCOEF / np.sqrt(order[1]),
                             round = False
                         ) * SEC_PER_DAY
                         #using just the function gives the total time in days to produce an order. 
                         #It is necessary to multiply by number of seconds in a day.
         
-        order_duration_product_2 = lognorm_int(
-                            mu = order[1] * P2["t_e"],
-                            varcoef = MACHINE_VARCOEF / np.sqrt(order[1]),
-                            round = False
-                        ) * SEC_PER_DAY
-
-        
         # calculate the setup time
-        setup_time_product_1 = lognorm_int(
-                        mu = P1["t_r"],
+        setup_time = lognorm_int(
+                        mu = self.current_product.product["t_r"],
                         varcoef = MACHINE_VARCOEF,
                         round = False
-                    ) * SEC_PER_DAY 
+                    ) * SEC_PER_DAY if self.last_product != order[0] else 0
                     # the same applies here as mentioned in the previous lognorm calculation
         # store the last product
-        self.last_product = 0
-
-        # calculate the setup time
-        setup_time_product_2 = lognorm_int(
-                        mu = P2["t_r"],
-                        varcoef = MACHINE_VARCOEF,
-                        round = False
-                    ) * SEC_PER_DAY 
-                    # the same applies here as mentioned in the previous lognorm calculation
-        # store the last product
-        self.last_product = 1
-
-        # calculate the total duration
-        order_duration = order_duration_product_1 + order_duration_product_2
-        # calculate the setup time
-        setup_time = setup_time_product_1 + setup_time_product_2
-        # calculate total time
-        total_time = order_duration + setup_time
-
+        self.last_product = order[0]
 
         # compare if total duration is smaller than the time left in a day
-        if total_time <= self.total_time_day:
+        if order_duration + setup_time <= self.total_time_day:
             return True
         else:
-            return False
+            return False"""
     
 
-    def produce(self, order):
-        """
+    """def produce(self, order):
+        ###
         This function checks first if it is possible to produce a given order in a day.
         Then it checks if it is possible to store the produced quantity.
         If both conditions are met, the order is produced and stored.
-        """
+        ###
 
         #store the current order
         self.current_order = order
@@ -414,16 +455,9 @@ class Machine:
             # check if it is possible to store the produced quantity
             if self.warehouse.is_possible_to_store(order):
                 # produce the order and store it (remark: no "production" done here. It is assumed done in self.is_possible_to_produce)
-                
-                #both products are produced at the same time and stored in the warehouse
-                self.warehouse.products[0].put(order[0])
-                self.warehouse.products[1].put(order[0])
-
-                # to have the same length of lists for both inventories, add 0 to the other inventory                
-                #both products
-                self.warehouse.products[0].put(0)
-                self.warehouse.products[1].put(0)
-
+                self.warehouse.products[self.current_order[0]].put(order[1])
+                # to have the same length of lists for both inventories, add 0 to the other inventory
+                self.warehouse.products[1 - self.current_order[0]].put(0)
                 # return 0 if the order was produced
                 return 0 #The order has been produced and stored successfully
             else:
@@ -431,7 +465,7 @@ class Machine:
                 return 101 #The order has been produced but not stored
         else:
             # return 201 if the order was not produced
-            return 201 #The order has not been produced
+            return 201 #The order has not been produced"""
     
 
     def fulfill(self):
@@ -439,28 +473,34 @@ class Machine:
         This function fulfills the demand for a current product.
 
         TODO: 
-            - Change later the variable t to a global one for training the RL agent.
             - Move it to Warehouse class (not mandatory)
         """
+
+        if self.t % HOURS_PER_DAY != HOURS_PER_DAY - 1:
+            # increase the time step
+            #self.t += 1
+            # return an error code meaning that it is not the time of a day to fulfill the demand
+            return 10, 10
         
-        # provide all material to demand and deduct the consumed amount from the inventory
-        max_material_product_1 = self.warehouse.products[0].inventory_level[-1]
-        max_material_product_2 = self.warehouse.products[1].inventory_level[-1]
-        max_material = [max_material_product_1, max_material_product_2]
-
-        used_material_1, exit_code_1 = self.warehouse.products[0].demand_class.fulfill(max_material[0], self.t)
-        used_material_2, exit_code_2 = self.warehouse.products[1].demand_class.fulfill(max_material[1], self.t)
-        used_material = [used_material_1, used_material_2]
-
-        # deduct the used material from the inventory
-        self.warehouse.products[0].get(used_material[0])
-        self.warehouse.products[1].get(used_material[1])
-
-        # to have the same length of lists for both inventories, add 0 to the other inventory
-        self.warehouse.products[0].get(0)
-        self.warehouse.products[1].get(0)
-
+        # fulfill for one product
+        exit_code_p1 = self.fulfill_one_product(0)
+        exit_code_p2 = self.fulfill_one_product(1)
+        
         # increase the time step
-        self.t += 1
+        #self.t += 1
         # return the exit code
-        return exit_code_1, exit_code_2
+        return exit_code_p1, exit_code_p2
+
+
+    def fulfill_one_product(self, product_number):
+        """
+        This function fulfills the demand for a product.
+        """
+
+        # provide all material to demand and deduct the consumed amount from the inventory
+        max_material = self.warehouse.products[product_number].inventory_level[-1]
+        used_material, exit_code = self.warehouse.products[product_number].demand_class.fulfill(max_material, self.t // HOURS_PER_DAY)
+        # deduct the used material from the inventory
+        self.warehouse.products[product_number].get(used_material)
+
+        return exit_code

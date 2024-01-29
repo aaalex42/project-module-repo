@@ -19,7 +19,7 @@ ONE_DAY = 1.0
 FIFTEEN_MINUTES = (ONE_DAY / (HOURS_PER_DAY * 60)) * 15
 
 # Set the start and end of the simulation
-SIM_CYCLES = 500
+SIM_CYCLES = 100_100 #500
 SIM_START = 0
 SIM_END = SIM_CYCLES * ONE_DAY
 
@@ -40,6 +40,12 @@ SCHEDULING_REGIME = "SPT"
 # Number of working hours of a machine in a day (the same as hours per day)
 # NOT USED
 MACHINE_WORKING_HOURS = HOURS_PER_DAY
+# bin size for the DQN environment
+BIN_SIZE = 10_000
+# service level threshold for p1
+SERV_LVL_P1 = 0.95
+# service level threshold for p2
+SERV_LVL_P2 = 0.95
 
 """
 Inventory more:
