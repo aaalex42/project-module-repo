@@ -1,3 +1,4 @@
+from typing import Tuple
 import gym 
 from gym import spaces
 from init_vars import *
@@ -69,7 +70,7 @@ class Production_DQN_Env(gym.Env):
         self.verbose = verbose
 
         self.step_count = 0
-
+        self.steps_per_episode = [] 
 
     def step(self, action): 
         #action_np = action.cpu().numpy() #convert tensor to numpy array because assert statement does not work with tensors      
@@ -78,17 +79,17 @@ class Production_DQN_Env(gym.Env):
         #check if action is in the action space Multidiscrete [(product id and quantity)]
         #print(self.action_space)
         #print(action[0].item(), action[1].item())
-        assert self.action_space.contains([action[0].item(), action[1].item()])
+
+        #Check if action is in the action space 
+        """try:
+            assert self.action_space.contains([action[0].item(), action[1].item()])
+        except AssertionError:
+            print("action not in action space")
+            print(action[0].item(), action[1].item())
+            return self._get_obs(), 0, True, False, {}, {}   
+        """
         
-        
-        
-        self.step_count += 1
-        
-        
-        if self.step_count >= 5000: #5000 days
-            truncated = True
-        else:
-            truncated = False
+        assert self.action_space.contains([action[0].item(), action[1].item()])        
 
         terminated = False
 
@@ -97,10 +98,13 @@ class Production_DQN_Env(gym.Env):
         """CHECK IF IT IS EVEN POSSIBLE TO HAVE NEGATIVE INVENTORY OR EXCEED MAXIMUM WAREHOUSE LEVEL"""
         if (self.machine.warehouse.current_warehouse_level > MAXIMUM_INVENTORY   
                 or self.machine.warehouse.products[0].inventory_level[-1] < 0  
-                or self.machine.warehouse.products[1].inventory_level[-1] < 0):
+                or self.machine.warehouse.products[1].inventory_level[-1] < 0
+                or self.machine.warehouse.products[0].inventory_level[-1] == 0 #NEW: if inventory is 0, the game ends
+                or self.machine.warehouse.products[1].inventory_level[-1] == 0): #NEW: if inventory is 0, the game ends 
             #give negative reward and restart the game
             reward = -1
             terminated = True
+        
 
             return self._get_obs(), reward, terminated, False, {}
 
@@ -139,11 +143,12 @@ class Production_DQN_Env(gym.Env):
             reward = -1
             terminated = True
         
-        print("step: ", self.step_count)
-        print(f' observation {self._get_obs()},    reward: {reward:.3f}, terminated: {terminated}, truncated: {truncated}')
+       
+        #print("step: ", self.step_count)
+        #print(f' observation {self._get_obs()},    reward: {reward:.3f}, terminated: {terminated}, truncated: {truncated}')
         #return observation, reward, terminated, False, {}
-        
-        return self._get_obs(), reward, terminated, truncated, False, {}
+        #print(self._get_obs(), reward, terminated, truncated, False, {})
+        return self._get_obs(), reward, terminated, False, {}
 
 
     def _get_obs(self):
@@ -190,10 +195,11 @@ class SkipStep(gym.Wrapper):
         """Repeat an action and sum the reward"""
         total_reward = 0.0
         for i in range(self._skip):
-            #Accumulate the reward and repeat the same action
-            obs, reward, done, truncated, _, _  = self.env.step(action)
+            #Accumulate the reward and repeat the same action            
+            obs, reward, done, _, _  = self.env.step(action)
+            #print('observation', obs, 'step', i, 'done', done,'reward', reward)
             total_reward += reward
             self.env.inc_t()
             if done:
-                break
-        return obs, total_reward, done, truncated, {}, {}
+                break        
+        return obs, total_reward, done, {}, {}

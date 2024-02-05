@@ -29,9 +29,9 @@ def lognorm_int(mu, varcoef, rbase=1, size=1, round=True) -> int:
 
     rounds it to an integer
     """
-
-    mu0 = np.log(mu / np.sqrt(varcoef ** 2 + 1.0))
-    sigma0 = np.sqrt(np.log(varcoef ** 2 + 1.0))
+    EPSILON = 1e-10
+    mu0 = np.log(mu / np.sqrt(varcoef ** 2 + 1.0) + EPSILON)    
+    sigma0 = np.sqrt(np.log(varcoef ** 2 + 1.0) + EPSILON)
     
     x = np.random.lognormal(mu0, sigma0, size = size)
 
