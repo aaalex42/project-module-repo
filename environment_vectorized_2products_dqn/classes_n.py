@@ -344,9 +344,11 @@ class Machine:
             # set the current product
             self.current_product = self.products[self.current_order[0]]
             # calculate the order duration
+            #prevent divison by zero
+            EPSILON = 1e-10
             order_duration = lognorm_int(
-                                mu = order[1] * self.current_product.product["t_e"],
-                                varcoef = MACHINE_VARCOEF / np.sqrt(order[1]),
+                                mu = order[1] * self.current_product.product["t_e"],                                
+                                varcoef = MACHINE_VARCOEF / np.sqrt(order[1] + EPSILON), # Episilon is added to prevent division by zero
                                 round = False
                             ) * HOURS_PER_DAY
                             #using just the function gives the total time in days to produce an order. 
