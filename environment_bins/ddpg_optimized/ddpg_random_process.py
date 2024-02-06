@@ -39,6 +39,6 @@ class GaussianWhiteNoiseProcess(AnnealedGaussianProcess):
         self.size = size
 
     def sample(self):
-        sample = np.random.normal(self.mu, self.current_sigma, self.size)
+        sample = np.round(np.random.normal(self.mu, self.current_sigma, self.size), 0)
         self.n_steps += 1
         return sample

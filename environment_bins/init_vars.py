@@ -4,7 +4,7 @@ This is a rewritten file from scratch for folder environment
 
 # Importing modules
 import matplotlib.pyplot as plt
-# ADD OTHER STUFF HERE
+from collections import namedtuple
 
 # Set the global variables
 DAYS_PER_WEEK = 7
@@ -97,4 +97,34 @@ P2 = {
     "eoq_mode"          : "FOW"                                                 # mode for EOQ calculation (check below the definitions)
 }
 
-# ADD HERE SOME FUNCTIONS
+"""
+----------------------------------------------------------------------------------
+Variables for Deep Deterministic Policy Gradient (DDPG)
+----------------------------------------------------------------------------------
+"""
+args = namedtuple("ARGS", "mode, env, validate_episodes, max_episode_length, validate_steps, output, debug, train_iter, resume, warmup, seed, hidden_layer_list, init_w, lr_actor, lr_critic, memory_size, window_length, noise_mu, noise_sigma, batch_size, tau, discount, epsilon_decay")
+#args = ARGS()
+args.mode = "train"                     # support option: train/test
+args.env = "SkipStep"                   # open-ai gym environment
+args.hidden_layer_list = [64, 128, 32]  # hidden layers for actor and critic
+args.init_w = 3e-3                      # weight initialization
+args.lr_actor = 1e-4                    # learning rate for actor
+args.lr_critic = 1e-3                   # learning rate for critic
+args.memory_size = 6_000_000            # memory size
+args.window_length = 1                  # window length MUST STAY 1!
+args.noise_mu = 0.                      # noise mu
+args.noise_sigma = 2                    # noise sigma
+args.batch_size = 64                    # minibatch size
+args.tau = 1e-3                         # moving average for target network
+args.discount = 0.99                    # discount factor
+args.epsilon_decay = 50_000             # linear decay of exploration policy
+args.warmup = 100                       # time without training but only filling the replay memory
+args.validate_episodes = 20             # CHECK THIS how many episode to perform during validate experiment
+args.max_episode_length = 1000          # maximum episode length
+args.output = 'output'                  # output directory
+args.debug = True                      # debug mode
+args.train_iter = 10_000                # train iters each time step
+args.validate_steps =  20              # CHECK THIS how many steps to perform a validate experiment 
+args.seed = -1                          # seed
+args.resume = 'default'                 # Resuming model path for testing
+

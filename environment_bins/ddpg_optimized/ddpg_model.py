@@ -1,8 +1,9 @@
 import numpy as np
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from init_vars import *
 
 
 #Dictonary of activation functions
@@ -93,13 +94,28 @@ class Actor(nn.Module):
 
         bin = self.linear_bin(out)
         bin = self.relu(bin)
-        return act, bin
+
+        ##print("BEFORE", "act", act.shape, "\nbin", bin.shape)
+
+        act = torch.argmax(act, dim = 1).unsqueeze(0).transpose(0, 1)
+        bin = torch.clamp(bin, 0, MAXIMUM_INVENTORY // BIN_SIZE)
+
+        ##print("AFTER", "act", act.shape, "\nbin", bin.shape)
+
+        action = torch.cat([act, bin], dim=1)
+        action = torch.round(action)
+
+        ##print("ACTION", action.shape)
+
+        return action
 
 
 class Critic(nn.Module):
     """
     Evaluates the action taken by the Actor, informs it of the quality of the action 
     and how it should adjust.
+
+    Done differently than in the original GitHub repo.
     """
     def __init__(self, nb_states, nb_actions, hidden_layer_list = [64, 128, 32], init_w = 3e-3) -> None:
         super().__init__()
