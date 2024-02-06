@@ -27,8 +27,11 @@ def to_numpy(tensor):
 
 
 def to_tensor(ndarray, volatile = False, requires_grad = False, dtype = FLOAT):
+    """
+    volatile is left out since it has no effect.
+    """
     return Variable(
-        torch.from_numpy(ndarray), volatile = volatile, requires_grad = requires_grad
+        torch.from_numpy(ndarray), requires_grad = requires_grad
     ).type(dtype)
 
 
