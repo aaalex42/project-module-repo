@@ -6,11 +6,12 @@ Reference: https://github.com/ghliu/pytorch-ddpg/blob/master/util.py
 import os
 import torch
 import time
-from torch.autograd import Variable
+#from torch.autograd import Variable
 
 
 USE_CUDA = torch.cuda.is_available()
-FLOAT = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
+#FLOAT = torch.cuda.float if USE_CUDA else torch.float
+DEVICE = "cuda" if USE_CUDA else "cpu"
 
 """CHECK IF THOSE ARE NECESSARY"""
 def prRed(prt): print("\033[91m {}\033[00m" .format(prt))
@@ -27,13 +28,11 @@ def to_numpy(tensor):
     return tensor.cpu().data.numpy() if USE_CUDA else tensor.data.numpy()
 
 
-def to_tensor(ndarray, volatile = False, requires_grad = False, dtype = FLOAT):
+def to_tensor(ndarray, requires_grad = False, dtype = torch.float):
     """
     volatile is left out since it has no effect.
     """
-    return Variable(
-        torch.from_numpy(ndarray), requires_grad = requires_grad
-    ).type(dtype)
+    return torch.tensor(ndarray, requires_grad = requires_grad, dtype=dtype).to(DEVICE)
 
 
 # This function implements a form of smoothing or blending of the target network's 
@@ -79,6 +78,7 @@ def get_output_folder(parent_dir, env_name):
     parent_dir = parent_dir + "-run{}".format(experiment_id)
     os.makedirs(parent_dir, exist_ok = True)
     return parent_dir
+
 
 def timing_decorator(method):
     def wrapper(self, *args, **kwargs):

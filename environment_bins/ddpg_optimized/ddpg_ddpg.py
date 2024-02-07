@@ -147,20 +147,18 @@ class DDPG_agent(object):
     
     @timing_decorator
     def select_action(self, cur_state, decay_epsilon=True):
-        action = self.actor(to_tensor(np.array([cur_state])))
+        action = to_numpy(
+            self.actor(to_tensor(np.array([cur_state])))
+        ).squeeze(0)
         """action_product = torch.argmax(action[0], dim = 1).unsqueeze(0)
         action = torch.cat([action_product, action[1]], dim=1)
         action = torch.round(action)"""
-        ##print("Select action BEFORE", action)
-        action = to_numpy(
-            action
-        ).squeeze(0)
         action[1] += self.is_training*max(self.epsilon, 0)*self.random_process.sample()
-        action[1] = np.clip(action[1], 0., MAXIMUM_INVENTORY // BIN_SIZE)
+        action = tuple(np.clip(action, 0., MAXIMUM_INVENTORY // BIN_SIZE).astype(int))
         if decay_epsilon:
             self.epsilon -= self.depsilon
         
-        action = np.round(action).astype(int)
+        #action = np.round(action).astype(int)
         self.cur_action = action
         return action
     

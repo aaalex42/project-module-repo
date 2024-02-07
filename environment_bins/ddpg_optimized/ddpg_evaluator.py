@@ -39,7 +39,7 @@ class Evaluator(object):
             done = False
             while not done: 
                 #get an action from policy
-                action = policy(observation).astype(int)
+                action = policy(observation)
 
                 #take a step
                 observation, reward, done, _, _ = env.step(action)
