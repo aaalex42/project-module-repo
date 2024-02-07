@@ -118,7 +118,7 @@ class Production_DQN_Env(gym.Env):
         """IMPLEMENT MAYBE TO SUM UP THE REWARDS FROM 2 PRODUCTS IF BOTH ARE FULFILLED"""
         if exit_code_fulf[0] == 101 or exit_code_fulf[1] == 101:
             # the demand has been fulfilled 
-            reward += 1 - self.machine.warehouse.current_warehouse_level / MAXIMUM_INVENTORY
+            reward += 0.2 - self.machine.warehouse.current_warehouse_level / MAXIMUM_INVENTORY
         if exit_code_fulf[0] == 102 or exit_code_fulf[1] == 102:
             # the demand has not been fulfilled
             reward += -1

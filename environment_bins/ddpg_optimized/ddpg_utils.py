@@ -5,6 +5,7 @@ Reference: https://github.com/ghliu/pytorch-ddpg/blob/master/util.py
 
 import os
 import torch
+import time
 from torch.autograd import Variable
 
 
@@ -78,3 +79,13 @@ def get_output_folder(parent_dir, env_name):
     parent_dir = parent_dir + "-run{}".format(experiment_id)
     os.makedirs(parent_dir, exist_ok = True)
     return parent_dir
+
+def timing_decorator(method):
+    def wrapper(self, *args, **kwargs):
+        start_time = time.time()
+        result = method(self, *args, **kwargs)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(f"{self.__class__}.{method} took {execution_time:.6f} seconds to execute.")
+        return result
+    return wrapper

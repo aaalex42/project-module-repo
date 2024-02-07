@@ -96,7 +96,9 @@ class Production_DQN_Env(gym.Env):
         """CHECK IF IT IS EVEN POSSIBLE TO HAVE NEGATIVE INVENTORY OR EXCEED MAXIMUM WAREHOUSE LEVEL"""
         if (self.machine.warehouse.current_warehouse_level > MAXIMUM_INVENTORY   
                 or self.machine.warehouse.products[0].inventory_level[-1] < 0  
-                or self.machine.warehouse.products[1].inventory_level[-1] < 0):
+                or self.machine.warehouse.products[1].inventory_level[-1] < 0
+                or self.machine.warehouse.products[0].inventory_level[-1] == 0 #NEW: if inventory is 0, the game ends
+                or self.machine.warehouse.products[1].inventory_level[-1] == 0): #NEW: if inventory is 0, the game ends ):
             #give negative reward and restart the game
             reward = -1
             terminated = True
@@ -129,7 +131,7 @@ class Production_DQN_Env(gym.Env):
             reward += 1 - self.machine.warehouse.current_warehouse_level / MAXIMUM_INVENTORY
         if exit_code_fulf[0] == 102 or exit_code_fulf[1] == 102:
             # the demand has not been fulfilled
-            reward += -1
+            reward += -2
 
         if ((reward != 0) and 
                 (self.machine.warehouse.products[0].demand_class.service_level < SERV_LVL_P1

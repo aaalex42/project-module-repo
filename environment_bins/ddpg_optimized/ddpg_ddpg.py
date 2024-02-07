@@ -19,6 +19,7 @@ from init_vars import MAXIMUM_INVENTORY, BIN_SIZE
 criterion = nn.MSELoss()
 
 class DDPG_agent(object):
+    @timing_decorator
     def __init__(self, nb_states, nb_actions, args : namedtuple) -> None:
         if args.seed > 0:
             self.seed(args.seed)
@@ -60,6 +61,7 @@ class DDPG_agent(object):
 
         if USE_CUDA: self.cuda()
     
+    @timing_decorator
     def update_policy(self):
         # sample batch
         state_batch, action_batch, reward_batch, \
@@ -115,23 +117,27 @@ class DDPG_agent(object):
         soft_update(self.actor_target, self.actor, self.tau)
         soft_update(self.critic_target, self.critic, self.tau)
     
+    @timing_decorator
     def eval(self):
         self.actor.eval()
         self.actor_target.eval()
         self.critic.eval()
         self.critic_target.eval()
     
+    @timing_decorator
     def cuda(self):
         self.actor.cuda()
         self.actor_target.cuda()
         self.critic.cuda()
         self.critic_target.cuda()
     
+    @timing_decorator
     def observe(self, cur_reward, new_state, done):
         if self.is_training:
             self.memory.append(self.cur_state, self.cur_action, cur_reward, done)
             self.cur_state = new_state
 
+    @timing_decorator
     def random_action(self):
         action_product = np.random.choice([0, 1])
         """CHANGED HERE"""
@@ -139,6 +145,7 @@ class DDPG_agent(object):
         self.cur_action = (action_product, action_qty)
         return (action_product, action_qty)
     
+    @timing_decorator
     def select_action(self, cur_state, decay_epsilon=True):
         action = self.actor(to_tensor(np.array([cur_state])))
         """action_product = torch.argmax(action[0], dim = 1).unsqueeze(0)
@@ -157,10 +164,12 @@ class DDPG_agent(object):
         self.cur_action = action
         return action
     
+    @timing_decorator
     def reset(self, obs):
         self.cur_state = obs
         self.random_process.reset_states()
 
+    @timing_decorator
     def load_weights(self, output):
         if output is None: return
 
@@ -172,6 +181,7 @@ class DDPG_agent(object):
             torch.load('{}/critic.pkl'.format(output))
         )
     
+    @timing_decorator
     def save_model(self,output):
         torch.save(
             self.actor.state_dict(),
@@ -182,6 +192,7 @@ class DDPG_agent(object):
             '{}/critic.pkl'.format(output)
         )
     
+    @timing_decorator
     def seed(self, s):
         torch.manual_seed(s)
         if USE_CUDA:
