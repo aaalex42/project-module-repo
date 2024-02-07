@@ -68,15 +68,15 @@ class DDPG_agent(object):
         # prepare the batch for the Q target
         ###print("actor target", self.actor_target(to_tensor(next_state_batch, volatile=True)))
         ###print("DONEEEEEEE")
-        input_critic_target = torch.cat(
+        input_critic_target = torch.cat( #here it was with volatile=True
             (
-                to_tensor(next_state_batch, volatile=True),
-                self.actor_target(to_tensor(next_state_batch, volatile=True))
+                to_tensor(next_state_batch),
+                self.actor_target(to_tensor(next_state_batch))
             ), dim = 1
         )
-        with torch.no_grad():
-            next_q_values = self.critic_target(input_critic_target)
-        #next_q_values.volatile = False
+        #with torch.no_grad():
+        next_q_values = self.critic_target(input_critic_target)
+        next_q_values.detach()
 
         target_q_batch = to_tensor(reward_batch) + \
             self.discount * to_tensor(terminal_batch.astype(float)) * next_q_values
@@ -134,7 +134,8 @@ class DDPG_agent(object):
 
     def random_action(self):
         action_product = np.random.choice([0, 1])
-        action_qty = np.random.randint(0, MAXIMUM_INVENTORY // BIN_SIZE)
+        """CHANGED HERE"""
+        action_qty = np.random.randint(0, MAXIMUM_INVENTORY // BIN_SIZE // (BIN_SIZE // 100))
         self.cur_action = (action_product, action_qty)
         return (action_product, action_qty)
     
@@ -143,16 +144,16 @@ class DDPG_agent(object):
         """action_product = torch.argmax(action[0], dim = 1).unsqueeze(0)
         action = torch.cat([action_product, action[1]], dim=1)
         action = torch.round(action)"""
+        ##print("Select action BEFORE", action)
         action = to_numpy(
             action
         ).squeeze(0)
         action[1] += self.is_training*max(self.epsilon, 0)*self.random_process.sample()
         action[1] = np.clip(action[1], 0., MAXIMUM_INVENTORY // BIN_SIZE)
-
         if decay_epsilon:
             self.epsilon -= self.depsilon
         
-        action = action.astype(int)
+        action = np.round(action).astype(int)
         self.cur_action = action
         return action
     

@@ -98,7 +98,7 @@ class Actor(nn.Module):
         ##print("BEFORE", "act", act.shape, "\nbin", bin.shape)
 
         act = torch.argmax(act, dim = 1).unsqueeze(0).transpose(0, 1)
-        bin = torch.clamp(bin, 0, MAXIMUM_INVENTORY // BIN_SIZE)
+        bin = torch.clamp(bin, min=0, max=MAXIMUM_INVENTORY // BIN_SIZE)
 
         ##print("AFTER", "act", act.shape, "\nbin", bin.shape)
 

@@ -24,8 +24,11 @@ def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_epi
         # agent pick action ...
         if step <= args.warmup:
             action = agent.random_action()
+            ##a = "random"
         else:
             action = agent.select_action(observation)
+            ##a = "selected"
+        ##print("Action", action, a)
 
         # env response with next_observation, reward, terminate_info
         observation2, reward, done, info, _ = env.step(action)
@@ -42,7 +45,7 @@ def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_epi
         if evaluate is not None and validate_steps > 0 and step % validate_steps == 0:
             policy = lambda x: agent.select_action(x, decay_epsilon=False)
             validate_reward = evaluate(env, policy, debug=False)
-            if debug: prYellow('[Evaluate] Step_{:07d}: mean_reward:{}'.format(step, validate_reward))
+            if debug: prYellow('[Evaluate] Step_{:07d}: mean_reward:{:.2f}'.format(step, validate_reward))
         
         # [optional] save intermideate model
         if step % int(num_iterations/3) == 0:
@@ -55,7 +58,7 @@ def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_epi
         observation = deepcopy(observation2)
 
         if done: # end of episode
-            if debug: prGreen('#{}: episode_reward:{} steps:{}'.format(episode,episode_reward,step))
+            if debug: prGreen('#{}: episode_reward:{:.2f} episode steps: {} steps:{} avg_wh_lvl: {}'.format(episode,episode_reward, episode_steps, step, env.machine.warehouse.current_warehouse_level))
 
             agent.memory.append(
                 observation,
