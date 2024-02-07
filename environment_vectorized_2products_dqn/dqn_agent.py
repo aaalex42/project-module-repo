@@ -32,7 +32,7 @@ Transition = namedtuple('Transition',
 class ReplayMemory(object):
     """A cyclic buffer of bounded size that holds the transitions observed recently."""
     def __init__(self, capacity):
-        self.memory = deque([], maxlen=capacity)
+        self.memory = deque([], maxlen=capacity) 
 
     def push(self, *args):
         """Save a transition"""
@@ -51,7 +51,6 @@ class DQN(nn.Module):
         super(DQN, self).__init__()
         self.layer1 = nn.Linear(n_observations, 128)
         self.layer2 = nn.Linear(128, 128)
-        #self.layer3 = nn.Linear(64, n_actions)
 
         # Output layer for product ID
         self.out_product = nn.Linear(128, 2)
@@ -77,7 +76,6 @@ class DQN(nn.Module):
         out_product = torch.sigmoid(out_product) #sigmoid function to get values between 0 and 1 (Product 1 or Product 2)
 
         out_order = self.out_order(x) #no activation function to get values between -inf and +inf (order amount)
-        #out_order = F.relu(out_order) #relu function to get values between 0 and +inf (order amount)
         return out_product, out_order
 
 
@@ -90,8 +88,10 @@ class DQN(nn.Module):
 # LR is the learning rate of the ``AdamW`` optimizer
     
 class DQNAgent:
-    def __init__(self, env, device, num_episodes=50, BATCH_SIZE=10000, GAMMA=0.99, EPS_START=0.9, EPS_END=0.05, EPS_DECAY=1000, TAU=0.005, LR=1e-5):
+    def __init__(self, env, device, num_episodes=50, BATCH_SIZE=64, BATCH_START_SIZE=10000, MEMORY_SIZE=100000, GAMMA=0.99, EPS_START=0.9, EPS_END=0.05, EPS_DECAY=1000, TAU=0.005, LR=1e-5):
         self.BATCH_SIZE = BATCH_SIZE
+        self.BATCH_START_SIZE = BATCH_START_SIZE
+        self.MEMORY_SIZE = MEMORY_SIZE
         self.GAMMA = GAMMA
         self.EPS_START = EPS_START
         self.EPS_END = EPS_END
@@ -106,20 +106,20 @@ class DQNAgent:
         self.max_order_amount = self.env.action_space.nvec[1] - 1 #the maximum order amount is the maximum value of the action space minus 1
 
         # Get number of actions from gym action space
-        self.n_actions = env.action_space.shape[0]
+        self.n_actions = self.env.action_space.shape[0]
 
         # Get the number of observations from the gym env
-        state, info = env.reset()
+        state, info = self.env.reset()
         
         #self.n_observations = len(state)
-        self.n_observations = env.observation_space.shape[0]
+        self.n_observations = self.env.observation_space.shape[0]
        
         self.policy_net = DQN(self.n_observations, self.n_actions).to(device) #the policy network is the network that is being trained
         self.target_net = DQN(self.n_observations, self.n_actions).to(device) #the target network is the network that is used to calculate the target values  
         self.target_net.load_state_dict(self.policy_net.state_dict()) #initialize the target network with the same weights as the policy network
 
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=self.LR, amsgrad=True)
-        self.memory = ReplayMemory(10000)
+        self.memory = ReplayMemory(self.MEMORY_SIZE)
 
         self.steps_done = 0
         self.episode_durations = []
@@ -130,27 +130,19 @@ class DQNAgent:
         self.total_rewards = []
 
     def select_action(self, state):
-        global steps_done 
+        #global env.machine.t 
         sample = random.random() 
         eps_threshold = self.EPS_END + (self.EPS_START - self.EPS_END) * \
-            math.exp(-1. * self.steps_done / self.EPS_DECAY)
-        self.steps_done += 1
+            math.exp(-1. * self.env.machine.t / self.EPS_DECAY)
+        #print('eps_threshold:', eps_threshold)
         if sample > eps_threshold:
             with torch.no_grad(): 
-                out_product, out_order = self.policy_net(state)
-                #print('state:', state)
-                #print('order:', out_order)
-                #print('out_product, out_order: ', out_product, out_order)
-                product_id = out_product.max(1).indices.view(1, 1)              
+                out_product, out_order = self.policy_net(state)                
+                product_id = out_product.max(1).indices.view(1, 1)     
                 order_amount = (torch.sigmoid(out_order) * self.max_order_amount).view(1,1).round().long() 
-                #print('orderam:', order_amount)
                 action = torch.cat((product_id, order_amount), dim=1)
-                #print('Network output: ')
-                #print('Network output: ', action.squeeze())
                 return action.squeeze() 
         else:
-            #print('Random action: ', torch.tensor(self.env.action_space.sample(), device=self.device, dtype=torch.long))          
-            #print('Random action: ')
             return torch.tensor(self.env.action_space.sample(), device=self.device, dtype=torch.long)
 
     def plot_durations(self, show_result=False):
@@ -182,7 +174,7 @@ class DQNAgent:
 
 
     def optimize_model(self):
-        if len(self.memory) < self.BATCH_SIZE:
+        if len(self.memory) < self.BATCH_START_SIZE: 
             return
         transitions = self.memory.sample(self.BATCH_SIZE)
         # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
@@ -234,7 +226,7 @@ class DQNAgent:
         expected_state_action_values = (next_state_values * self.GAMMA) + reward_batch
 
         # Compute Huber loss
-        criterion = nn.SmoothL1Loss()
+        criterion = nn.CrossEntropyLoss()
         loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
 
         # Optimize the model
@@ -262,25 +254,21 @@ class DQNAgent:
             state, info = self.env.reset()
             state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
             for t in count():
-                action = self.select_action(state)
-                #action = np.array(action_tensor.cpu())
-                #print(action)                
-                observation, reward, terminated,  _, _ = self.env.step(action)
-                print('observation:', observation)      
+                action = self.select_action(state)              
+                observation, reward, terminated,  _, _ = self.env.step(action)     
                 self.env.inc_t()                       
                 self.total_reward += reward
                 reward = torch.tensor([reward], device=device)                
-                self.inventory_levels.append(observation[0])
+                self.inventory_levels.append(observation[0] + observation[1]) #Correct?
                 self.total_rewards.append(self.total_reward)        
-                done = terminated #or t >= 180 #truncated after 180 steps (~ 1 week) 
+                done = terminated 
                 if done:
                     self.env.reset()
                     next_state = None
                 else:
                     next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
 
-                # Store the transition in memory
-                
+                # Store the transition in memory                
                 self.memory.push(state, action, next_state, reward)
 
                 # Move to the next state
@@ -298,8 +286,6 @@ class DQNAgent:
 
                 if done:
                     self.episode_durations.append(t + 1)
-                    #print('last action', action)
-                    #print(observation, reward, terminated, done, {})
                     break
                  
             print("Episode: ", i_episode,'|' ," Duration: ", t+1, '|' ,"Total Reward:", self.total_reward, '|' ,'Terminated:', terminated)   
@@ -326,7 +312,10 @@ class DQNAgent:
 
 
         print("total_rewards: ", total_rewards[-1])
+        print('mean reward per episode is: ', np.mean(total_rewards))
         print("Complete")
+        print('Servicelevel not met for Product 1:', self.env.service_level_not_met_1, '|', 'Servicelevel not met for Product 2:', self.env.service_level_not_met_2)
+        print('Total Average inventory level :', np.mean(inventory_levels))
         self.plot_durations(show_result=True)
         plt.ioff()
         plt.show()

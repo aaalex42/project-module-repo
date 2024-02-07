@@ -72,14 +72,10 @@ class Production_DQN_Env(gym.Env):
         self.step_count = 0
         self.steps_per_episode = [] 
 
-    def step(self, action): 
-        #action_np = action.cpu().numpy() #convert tensor to numpy array because assert statement does not work with tensors      
-        
-        #print(action)
-        #check if action is in the action space Multidiscrete [(product id and quantity)]
-        #print(self.action_space)
-        #print(action[0].item(), action[1].item())
+        self.service_level_not_met_1 = 0
+        self.service_level_not_met_2 = 0
 
+    def step(self, action): 
         #Check if action is in the action space 
         """try:
             assert self.action_space.contains([action[0].item(), action[1].item()])
@@ -88,14 +84,13 @@ class Production_DQN_Env(gym.Env):
             print(action[0].item(), action[1].item())
             return self._get_obs(), 0, True, False, {}, {}   
         """
-        
         assert self.action_space.contains([action[0].item(), action[1].item()])        
 
         terminated = False
 
         #check if maximum warehouse level is exceeded, or inventory is negative
         #for both cases, the game ends with negative reward
-        """CHECK IF IT IS EVEN POSSIBLE TO HAVE NEGATIVE INVENTORY OR EXCEED MAXIMUM WAREHOUSE LEVEL"""
+        """CHECK IF IT IS POSSIBLE TO HAVE NEGATIVE INVENTORY OR ZERO INVENTORY OR EXCEED MAXIMUM WAREHOUSE LEVEL"""
         if (self.machine.warehouse.current_warehouse_level > MAXIMUM_INVENTORY   
                 or self.machine.warehouse.products[0].inventory_level[-1] < 0  
                 or self.machine.warehouse.products[1].inventory_level[-1] < 0
@@ -104,7 +99,6 @@ class Production_DQN_Env(gym.Env):
             #give negative reward and restart the game
             reward = -1
             terminated = True
-        
 
             return self._get_obs(), reward, terminated, False, {}
 
@@ -120,14 +114,7 @@ class Production_DQN_Env(gym.Env):
             print("    service level p2: ", self.machine.warehouse.products[1].demand_class.service_level)
 
         reward = 0
-        #if exit_code_fulf[0] == 10:
-            # not the right hour to fulfill an order
-            #reward += 0
-            #print("    -reward: ", reward)
-        #if exit_code_fulf[0] == 100 or exit_code_fulf[1] == 100:
-            # no demand in that day, reward 0
-            #reward += 0
-            #print("    -reward exit code 100: ", reward)
+
         """IMPLEMENT MAYBE TO SUM UP THE REWARDS FROM 2 PRODUCTS IF BOTH ARE FULFILLED"""
         if exit_code_fulf[0] == 101 or exit_code_fulf[1] == 101:
             # the demand has been fulfilled 
@@ -139,15 +126,16 @@ class Production_DQN_Env(gym.Env):
         if ((reward != 0) and 
                 (self.machine.warehouse.products[0].demand_class.service_level < SERV_LVL_P1
                 or self.machine.warehouse.products[1].demand_class.service_level < SERV_LVL_P2)):
+            
+            # Counts how often the service level is not met
+            if self.machine.warehouse.products[0].demand_class.service_level < SERV_LVL_P1:              
+                self.service_level_not_met_1 += 1
+            if self.machine.warehouse.products[1].demand_class.service_level < SERV_LVL_P2:            
+                self.service_level_not_met_2 += 1
             # the service level is not met
             reward = -1
             terminated = True
-        
-       
-        #print("step: ", self.step_count)
-        #print(f' observation {self._get_obs()},    reward: {reward:.3f}, terminated: {terminated}, truncated: {truncated}')
-        #return observation, reward, terminated, False, {}
-        #print(self._get_obs(), reward, terminated, truncated, False, {})
+
         return self._get_obs(), reward, terminated, False, {}
 
 
